@@ -9,7 +9,6 @@ import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,15 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUpdateEvent } from "@/data/hooks/use-events";
 import { useEventTypes } from "@/data/hooks/use-settings";
 import type { Evento } from "@/domain/types";
-
-const eventoSchema = z.object({
-  name: z.string().trim().min(1, "Informe o nome do evento.").max(80, "Máximo de 80 caracteres."),
-  eventTypeId: z.string().min(1, "Selecione o tipo de evento."),
-  eventDate: z.string().min(1, "Selecione a data do evento."),
-  eventTime: z.string(),
-});
-
-type EventoFormValues = z.infer<typeof eventoSchema>;
+import { eventoSchema, type EventoFormValues } from "./evento-form-schema";
 
 function valuesFor(evento: Evento): EventoFormValues {
   return {
