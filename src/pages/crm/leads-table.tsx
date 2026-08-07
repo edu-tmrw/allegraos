@@ -17,12 +17,14 @@ import type { Contact, EventType, PipelineStage } from "@/domain/types";
 export function LeadsTable({
   contacts,
   stages,
+  activeStages,
   eventTypesById,
   archived,
   onOpenContact,
 }: {
   contacts: Contact[];
   stages: PipelineStage[];
+  activeStages: PipelineStage[];
   eventTypesById: Map<string, EventType>;
   archived: boolean;
   onOpenContact: (contactId: string) => void;
@@ -90,7 +92,7 @@ export function LeadsTable({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {stages.map((stage) => (
+                      {activeStages.map((stage) => (
                         <SelectItem key={stage.id} value={stage.id}>
                           {stage.name}
                         </SelectItem>

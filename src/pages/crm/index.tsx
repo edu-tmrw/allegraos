@@ -117,6 +117,7 @@ export function CrmPage() {
         <LeadsTable
           contacts={contacts}
           stages={stages}
+          activeStages={activeStages}
           eventTypesById={eventTypesById}
           archived={showArchived}
           onOpenContact={handleOpenContact}

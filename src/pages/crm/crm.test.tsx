@@ -92,4 +92,26 @@ describe("CrmPage — lista view", () => {
 
     await waitFor(() => expect(trigger).toHaveTextContent("Em conversa"));
   });
+
+  test("inline select offers only active stages, not inactive ones", async () => {
+    const user = userEvent.setup();
+
+    // Create an inactive stage via the test-only store oracle
+    const { crud } = await import("@/data/store");
+    crud("pipelineStages").create({ name: "Antiga", position: 99, active: false });
+
+    renderCrmPage();
+
+    await user.click(screen.getByRole("tab", { name: "Lista" }));
+
+    const trigger = await screen.findByRole("combobox", { name: "Etapa de Fernanda Lima" });
+    await user.click(trigger);
+
+    // Verify that only the 4 active stages are offered, not the inactive one
+    expect(screen.getByRole("option", { name: "Novo contato" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Em conversa" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Proposta enviada" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Negociação" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Antiga" })).not.toBeInTheDocument();
+  });
 });
