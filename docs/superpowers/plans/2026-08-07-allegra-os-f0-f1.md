@@ -114,9 +114,13 @@ Auth/rotas: `useAuth() → { user: {profile, role} | null; loginAs(profileId); l
 
 ### F0 — Fundação
 
-**T0. Materializar o plano no repo** — copiar este plano para `docs/superpowers/plans/2026-08-07-allegra-os-f0-f1.md`; commit `docs: plano de implementação F0+F1`.
+### Task 0: Materializar o plano no repo
 
-**T1. Scaffold Vite + tema Allegra** — escrever à mão (sem `create-vite`, evita prompts em dir não-vazio): `package.json` (scripts `dev/build/preview/test/typecheck`), `vite.config.ts` (plugins react + tailwindcss, alias `@→/src`, config vitest happy-dom), tsconfigs strict com paths, `index.html` (`lang="pt-BR"`, título "AllegraOS"), `.gitignore`, `vercel.json` `{"rewrites":[{"source":"/(.*)","destination":"/index.html"}]}`, `src/index.css` completo: `@import "tailwindcss"` + imports @fontsource (Jost Variable; Cormorant Garamond 500/600/700) + `:root` com todos os tokens do spec §8 **mais** `--positive #3f7d54`, `--negative #c13438`, `--chart-1..5/-other` (paleta validada acima) + bloco `@theme inline` mapeando `--color-*`, `--font-sans/serif`, `--radius-*` + base: `body` bg/fg/font-sans, `h1-h3` font-serif. `src/main.tsx` renderizando um card de sanidade com as fontes. Instalar deps (lista da Stack). Verificar: dev server mostra tipografia/cores da marca; build ok. Commit.
+copiar este plano para `docs/superpowers/plans/2026-08-07-allegra-os-f0-f1.md`; commit `docs: plano de implementação F0+F1`.
+
+### Task 1: Scaffold Vite + tema Allegra
+
+escrever à mão (sem `create-vite`, evita prompts em dir não-vazio): `package.json` (scripts `dev/build/preview/test/typecheck`), `vite.config.ts` (plugins react + tailwindcss, alias `@→/src`, config vitest happy-dom), tsconfigs strict com paths, `index.html` (`lang="pt-BR"`, título "AllegraOS"), `.gitignore`, `vercel.json` `{"rewrites":[{"source":"/(.*)","destination":"/index.html"}]}`, `src/index.css` completo: `@import "tailwindcss"` + imports @fontsource (Jost Variable; Cormorant Garamond 500/600/700) + `:root` com todos os tokens do spec §8 **mais** `--positive #3f7d54`, `--negative #c13438`, `--chart-1..5/-other` (paleta validada acima) + bloco `@theme inline` mapeando `--color-*`, `--font-sans/serif`, `--radius-*` + base: `body` bg/fg/font-sans, `h1-h3` font-serif. `src/main.tsx` renderizando um card de sanidade com as fontes. Instalar deps (lista da Stack). Verificar: dev server mostra tipografia/cores da marca; build ok. Commit.
 
 **T2. shadcn + formatadores + Money/CurrencyInput** *(TDD nos formatadores)* — escrever `components.json` à mão (style new-york, css `src/index.css`, cssVariables true, aliases `@/components`, `@/lib/utils`) e `npx shadcn@latest add button card dialog alert-dialog input select tabs table badge sheet switch textarea label separator dropdown-menu tooltip sonner skeleton`. `src/lib/format.ts` com testes primeiro (`format.test.ts`): formatBRL(150000)→"R$ 1.500,00", inputToCents("1.234,56")→123456, inputToCents("")→0, roundtrip, formatDate, formatMonthShort, formatTime(null)→"—". `Money` e `CurrencyInput` (máscara por dígitos: digitar "1500" → "15,00") com teste RTL básico de sinal/cor/máscara. Commit.
 
@@ -124,43 +128,79 @@ Auth/rotas: `useAuth() → { user: {profile, role} | null; loginAs(profileId); l
 
 **T4. Mock store + seeds** *(TDD nas operações)* — `seed.ts` `buildSeed(todayISO)` com datas RELATIVAS a hoje: roles Admin/Comercial (spec §4), profiles Ana (admin) e Bia (comercial), 3 tipos de evento, 8 serviços do site (Orquestra com variações Trio R$3.500/Quarteto R$4.500/Sexteto R$6.500; Carrinho de Brigadeiro "até 100" R$900/"até 200" R$1.400; demais com preço padrão), categorias do spec §4, 4 etapas de funil, 3 pessoas de equipe, 6 eventos (2 concluídos quitados com custos, 3 ativos parcialmente pagos — 1 a ~15 dias com horário, 1 cancelado), ~10 meses de lançamentos (custos fixos mensais Sala R$800 + Instagram R$260, parcelas e custos dos eventos) para os gráficos nascerem vivos, 7 leads distribuídos nas etapas (1 com proposta aceita pronto pra converter, 1 arquivado), 3 propostas (sent/accepted/rejected) com itens, atividades com follow-up de hoje e um atrasado. `store.ts` (API acima). Testes: persistência roundtrip em happy-dom, convertLead feliz + rejeições (proposta de outro lead, não aceita, lead já ganho), canInactivateStage. Commit.
 
-**T5. Auth fake + permissões** — `auth.tsx` (sessão em localStorage `allegra-session`, `loginAs`, `logout`, `usePerms`, `RequirePerm` com redirect para `defaultRouteFor`), teste unitário de `defaultRouteFor` (admin→/dashboard, comercial→/crm). Commit.
+### Task 5: Auth fake + permissões
 
-**T6. Router + AppShell + Login** — `main.tsx` (providers + Toaster sonner), `router.tsx` (mapa acima + not-found pt), `app-shell.tsx`: sidebar desktop (wordmark "Allegra" serif, nav filtrada por permissão com ícones lucide, bloco do usuário + sair) e mobile (top bar + bottom nav ≤5 itens), páginas placeholder para todas as rotas. `login.tsx`: cartão com identidade (serif + dourado), campos email/senha decorativos, botões "Entrar como Ana — Administradora" / "Entrar como Bia — Comercial", rodapé "Restaurar dados de demonstração" (resetDB + toast). Verificar nos dois papéis e a 375px. Commit.
+`auth.tsx` (sessão em localStorage `allegra-session`, `loginAs`, `logout`, `usePerms`, `RequirePerm` com redirect para `defaultRouteFor`), teste unitário de `defaultRouteFor` (admin→/dashboard, comercial→/crm). Commit.
 
-**T7. Deploy F0** — `gh repo create allegraOS --private --source=. --push` (requer `gh` autenticado; confirmar owner com o usuário) e deploy Vercel (import do repo no dashboard OU `npx vercel` — passo assistido pelo usuário: login interativo). Gate F0: **shell navegável no ar**. Commit de eventuais ajustes.
+### Task 6: Router + AppShell + Login
+
+`main.tsx` (providers + Toaster sonner), `router.tsx` (mapa acima + not-found pt), `app-shell.tsx`: sidebar desktop (wordmark "Allegra" serif, nav filtrada por permissão com ícones lucide, bloco do usuário + sair) e mobile (top bar + bottom nav ≤5 itens), páginas placeholder para todas as rotas. `login.tsx`: cartão com identidade (serif + dourado), campos email/senha decorativos, botões "Entrar como Ana — Administradora" / "Entrar como Bia — Comercial", rodapé "Restaurar dados de demonstração" (resetDB + toast). Verificar nos dois papéis e a 375px. Commit.
+
+### Task 7: Deploy F0
+
+`gh repo create allegraOS --private --source=. --push` (requer `gh` autenticado; confirmar owner com o usuário) e deploy Vercel (import do repo no dashboard OU `npx vercel` — passo assistido pelo usuário: login interativo). Gate F0: **shell navegável no ar**. Commit de eventuais ajustes.
 
 ### F1 — Telas sobre mock
 
-**T8. Hooks de dados** — todos os hooks de `src/data/hooks/` (exports listados nos Contratos; query keys por recurso, mutações invalidam as keys afetadas; `use-dashboard` compõe calc + store). Só typecheck (camada fina; store já testado). Commit.
+### Task 8: Hooks de dados
 
-**T9. Configurações: shell + Tipos/Categorias/Etapas** — página com Tabs; editor de lista genérico local (nome + extras + switch ativo + criar/editar em dialog). Categorias com select in/out e badge colorida. Etapas com reordenar ↑/↓ (troca `position`) e inativação guardada por `canInactivateStage` → toast "Mova os leads desta etapa antes de inativá-la". Commit.
+todos os hooks de `src/data/hooks/` (exports listados nos Contratos; query keys por recurso, mutações invalidam as keys afetadas; `use-dashboard` compõe calc + store). Só typecheck (camada fina; store já testado). Commit.
 
-**T10. Configurações: Serviços & variações** — tabela expansível: linha do serviço (nome, preço padrão ou "por variação", ativo) → sub-lista de variações (nome, preço, ativo) com CRUD. Formulários com CurrencyInput. Commit.
+### Task 9: Configurações: shell + Tipos/Categorias/Etapas
 
-**T11. Configurações: Usuários & papéis (mock)** — lista de perfis (nome, papel via select, ativo) + "Adicionar usuária" (dialog, com nota "convite real entra na fase de banco"); editor de papéis (linhas + switches das 5 permissões + novo papel). Guarda: não permitir remover a própria permissão de configurações/inativar a si mesma (toast). Commit.
+página com Tabs; editor de lista genérico local (nome + extras + switch ativo + criar/editar em dialog). Categorias com select in/out e badge colorida. Etapas com reordenar ↑/↓ (troca `position`) e inativação guardada por `canInactivateStage` → toast "Mova os leads desta etapa antes de inativá-la". Commit.
 
-**T12. Eventos: lista + criar** — busca por nome, filtros (tipo, ano, status derivado — default **Ativos**), ordenação **crescente por data (+hora)**; colunas nome/tipo/data+hora/status badge/contrato/recebido/a receber; mobile = cards. "Novo evento": nome, tipo, data, horário (opcional) → navega ao detalhe. Estados vazios. Commit.
+### Task 10: Configurações: Serviços & variações
 
-**T13. Evento: detalhe base** — header (nome, badges de tipo e status, **data + horário em destaque serif**, "em N dias" se futuro), 5 stat cards via `useEventFinancials` (contrato/recebido/a receber/custo/lucro; excedente recebido > contrato mostrado como nota visual, spec §9), observações (textarea + salvar), editar (dialog), cancelar (AlertDialog) / reativar; banner quando cancelado. Seções de serviços/lançamentos como placeholders. Gating: cards e lançamentos só com manageFinance; escrita só com manageEvents. Commit.
+tabela expansível: linha do serviço (nome, preço padrão ou "por variação", ativo) → sub-lista de variações (nome, preço, ativo) com CRUD. Formulários com CurrencyInput. Commit.
 
-**T14. Evento: serviços + desconto** — `ServiceItemsEditor` (componente compartilhado): tabela de itens (serviço, variação, valor, "fechado em", remover), "Adicionar serviço" (select de ativos → select de variação obrigatório quando houver → CurrencyInput pré-preenchido do padrão, exigir > 0), desconto geral editável, linha-resumo "Σ itens − desconto = contrato". Plugar no detalhe. Commit.
+### Task 11: Configurações: Usuários & papéis (mock)
 
-**T15. Evento: lançamentos** — `TransactionFormDialog` (compartilhado): toggle Entrada/Saída, CurrencyInput, data (default hoje), categoria filtrada por tipo (default "Pagamento de contrato" p/ entrada em evento), descrição; evento travado no contexto do detalhe; aviso quando evento cancelado. Lista date desc com `<Money kind>`, editar/excluir com confirmação. Commit.
+lista de perfis (nome, papel via select, ativo) + "Adicionar usuária" (dialog, com nota "convite real entra na fase de banco"); editor de papéis (linhas + switches das 5 permissões + novo papel). Guarda: não permitir remover a própria permissão de configurações/inativar a si mesma (toast). Commit.
 
-**T16. Financeiro** — livro-razão completo: filtros (mês default atual + "todos", tipo, categoria, escopo Todos/Administração central/Evento específico), tabela date desc, rodapé com totais do filtro (entradas, saídas, saldo), "Novo lançamento" (mesmo dialog, evento destravado), mobile cards. Commit.
+### Task 12: Eventos: lista + criar
 
-**T17. Dashboard** — cards (Caixa atual, A receber, Faturamento do mês, Lucro do mês); linha 12 meses faturamento×lucro (`--chart-1`/`--chart-2`, 2px, hover dots ≥8px, labels diretos no fim + legenda, grid tracejado recessivo, tooltip BRL, eixo único); donut por serviço (filtro Este ano/Últimos 12 meses/Tudo; top 5 + "Outros" `--chart-other`; stroke 2px `--background` entre fatias; total no centro; legenda + % nas fatias ≥8%); barras horizontais de saídas por categoria (tom único `--chart-1`, valores à direita, mesmo filtro de período do donut); lista Próximos eventos (5: nome, data+hora, "em N dias", a receber). Recharts + ResponsiveContainer; empilhar no mobile. Conferir contra `references/anti-patterns.md` da skill dataviz. Commit.
+busca por nome, filtros (tipo, ano, status derivado — default **Ativos**), ordenação **crescente por data (+hora)**; colunas nome/tipo/data+hora/status badge/contrato/recebido/a receber; mobile = cards. "Novo evento": nome, tipo, data, horário (opcional) → navega ao detalhe. Estados vazios. Commit.
 
-**T18. CRM: kanban** — colunas = etapas ativas por `position`; cards (nome, badge do tipo de interesse, badge de follow-up vencido); drag entre colunas (@dnd-kit: DndContext + useDroppable/useDraggable) → `moveStage`; toggle Kanban/Lista (lista com select de etapa inline); banner de follow-ups hoje/atrasados no topo (contador + lista → abre lead); "Novo lead" (nome, telefone, email, tipo de interesse, etapa default = primeira); arquivados ocultos + toggle "Ver arquivados"; mobile: colunas com scroll horizontal + snap. Commit.
+### Task 13: Evento: detalhe base
 
-**T19. CRM: painel do lead** — Sheet (direita no desktop, fullscreen mobile): dados editáveis, timeline desc (nota; follow-up com data; checkbox concluir), arquivar/desarquivar, badge **GANHO** + link para o evento quando existir evento com `contactId` do lead. Commit.
+header (nome, badges de tipo e status, **data + horário em destaque serif**, "em N dias" se futuro), 5 stat cards via `useEventFinancials` (contrato/recebido/a receber/custo/lucro; excedente recebido > contrato mostrado como nota visual, spec §9), observações (textarea + salvar), editar (dialog), cancelar (AlertDialog) / reativar; banner quando cancelado. Seções de serviços/lançamentos como placeholders. Gating: cards e lançamentos só com manageFinance; escrita só com manageEvents. Commit.
 
-**T20. CRM: propostas + conversão** — seção propostas no painel: lista (data, valor Σ itens − desconto, badge de status, marcar aceita/recusada quando enviada), "Nova proposta" (ServiceItemsEditor + desconto + data + notas). "Converter em evento": habilitado com proposta aceita e lead sem evento → dialog (proposta [se >1 aceita], nome prefill, tipo prefill do interesse — obrigatório, data, horário) → `convertLead` → toast + navegar ao evento. Commit.
+### Task 14: Evento: serviços + desconto
 
-**T21. Equipe** — tabela CRUD (nome, telefone, função, pagamento em texto livre, ativo) com dialog e estado vazio. Commit.
+`ServiceItemsEditor` (componente compartilhado): tabela de itens (serviço, variação, valor, "fechado em", remover), "Adicionar serviço" (select de ativos → select de variação obrigatório quando houver → CurrencyInput pré-preenchido do padrão, exigir > 0), desconto geral editável, linha-resumo "Σ itens − desconto = contrato". Plugar no detalhe. Commit.
 
-**T22. Polimento F1 + gate de validação** — auditoria de estados vazios/skeletons; erros globais → toast (handler no QueryClient); `document.title` por página; favicon simples; varredura mobile 375px tela a tela; README (rodar, deploy, usuários demo, restaurar demo); build + deploy; **roteiro de validação com a cliente**: login → dashboard → abrir evento próximo → registrar parcela e gasto → conferir totais → criar lead → proposta → converter → configurações (criar variação) → papel Comercial (só CRM). Commit. **Gate F1: sessão de validação com a cliente.**
+### Task 15: Evento: lançamentos
+
+`TransactionFormDialog` (compartilhado): toggle Entrada/Saída, CurrencyInput, data (default hoje), categoria filtrada por tipo (default "Pagamento de contrato" p/ entrada em evento), descrição; evento travado no contexto do detalhe; aviso quando evento cancelado. Lista date desc com `<Money kind>`, editar/excluir com confirmação. Commit.
+
+### Task 16: Financeiro
+
+livro-razão completo: filtros (mês default atual + "todos", tipo, categoria, escopo Todos/Administração central/Evento específico), tabela date desc, rodapé com totais do filtro (entradas, saídas, saldo), "Novo lançamento" (mesmo dialog, evento destravado), mobile cards. Commit.
+
+### Task 17: Dashboard
+
+cards (Caixa atual, A receber, Faturamento do mês, Lucro do mês); linha 12 meses faturamento×lucro (`--chart-1`/`--chart-2`, 2px, hover dots ≥8px, labels diretos no fim + legenda, grid tracejado recessivo, tooltip BRL, eixo único); donut por serviço (filtro Este ano/Últimos 12 meses/Tudo; top 5 + "Outros" `--chart-other`; stroke 2px `--background` entre fatias; total no centro; legenda + % nas fatias ≥8%); barras horizontais de saídas por categoria (tom único `--chart-1`, valores à direita, mesmo filtro de período do donut); lista Próximos eventos (5: nome, data+hora, "em N dias", a receber). Recharts + ResponsiveContainer; empilhar no mobile. Conferir contra `references/anti-patterns.md` da skill dataviz. Commit.
+
+### Task 18: CRM: kanban
+
+colunas = etapas ativas por `position`; cards (nome, badge do tipo de interesse, badge de follow-up vencido); drag entre colunas (@dnd-kit: DndContext + useDroppable/useDraggable) → `moveStage`; toggle Kanban/Lista (lista com select de etapa inline); banner de follow-ups hoje/atrasados no topo (contador + lista → abre lead); "Novo lead" (nome, telefone, email, tipo de interesse, etapa default = primeira); arquivados ocultos + toggle "Ver arquivados"; mobile: colunas com scroll horizontal + snap. Commit.
+
+### Task 19: CRM: painel do lead
+
+Sheet (direita no desktop, fullscreen mobile): dados editáveis, timeline desc (nota; follow-up com data; checkbox concluir), arquivar/desarquivar, badge **GANHO** + link para o evento quando existir evento com `contactId` do lead. Commit.
+
+### Task 20: CRM: propostas + conversão
+
+seção propostas no painel: lista (data, valor Σ itens − desconto, badge de status, marcar aceita/recusada quando enviada), "Nova proposta" (ServiceItemsEditor + desconto + data + notas). "Converter em evento": habilitado com proposta aceita e lead sem evento → dialog (proposta [se >1 aceita], nome prefill, tipo prefill do interesse — obrigatório, data, horário) → `convertLead` → toast + navegar ao evento. Commit.
+
+### Task 21: Equipe
+
+tabela CRUD (nome, telefone, função, pagamento em texto livre, ativo) com dialog e estado vazio. Commit.
+
+### Task 22: Polimento F1 + gate de validação
+
+auditoria de estados vazios/skeletons; erros globais → toast (handler no QueryClient); `document.title` por página; favicon simples; varredura mobile 375px tela a tela; README (rodar, deploy, usuários demo, restaurar demo); build + deploy; **roteiro de validação com a cliente**: login → dashboard → abrir evento próximo → registrar parcela e gasto → conferir totais → criar lead → proposta → converter → configurações (criar variação) → papel Comercial (só CRM). Commit. **Gate F1: sessão de validação com a cliente.**
 
 ## Verificação end-to-end
 
