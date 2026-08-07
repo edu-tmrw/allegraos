@@ -157,6 +157,13 @@ export interface Crud<T> {
  * A type-safe CRUD surface over one resource of the mock database. Every
  * mutation persists immediately (loads the current db, mutates it, saves
  * it once). `update`/`remove` throw when `id` doesn't resolve to a row.
+ *
+ * `list`/`get`/`update` return `structuredClone`d rows — deep copies, never
+ * live references into the store's own arrays — so a caller (or a React
+ * Query cache holding onto the returned value) can never mutate the store
+ * out from under itself except through another explicit `update()`/`create()`
+ * call. `create()` still returns the entity it just pushed by reference,
+ * since nothing yet holds a competing reference to it at that instant.
  */
 export function crud<K extends keyof MockDB>(key: K): Crud<MockDB[K][number]> {
   type T = MockDB[K][number];
@@ -167,11 +174,12 @@ export function crud<K extends keyof MockDB>(key: K): Crud<MockDB[K][number]> {
 
   return {
     list() {
-      return [...(loadDB()[key] as T[])];
+      return structuredClone(loadDB()[key] as T[]);
     },
 
     get(id) {
-      return (loadDB()[key] as T[]).find((item) => idOf(key, item) === id) ?? null;
+      const found = (loadDB()[key] as T[]).find((item) => idOf(key, item) === id);
+      return found ? structuredClone(found) : null;
     },
 
     create(input) {
@@ -196,7 +204,7 @@ export function crud<K extends keyof MockDB>(key: K): Crud<MockDB[K][number]> {
       const updated = { ...list[index], ...patch };
       list[index] = updated;
       saveDB(db);
-      return updated;
+      return structuredClone(updated);
     },
 
     remove(id) {

@@ -148,10 +148,22 @@ describe("crud", () => {
     resetDB();
   });
 
-  test("list() returns every row of the resource", () => {
-    const eventTypes = crud("eventTypes").list();
-    expect(eventTypes.length).toBeGreaterThan(0);
-    expect(eventTypes).toEqual(loadDB().eventTypes);
+  test("list() returns deep copies — mutating the returned array/items leaves the store and localStorage untouched", () => {
+    const created = crud("eventTypes").create({ name: "Chá de panela", active: true });
+
+    const first = crud("eventTypes").list();
+    expect(first.length).toBeGreaterThan(0);
+    const target = first.find((t) => t.id === created.id)!;
+    target.name = "MUTATED";
+    first.push({ id: "injected", name: "Injected", active: true });
+
+    const second = crud("eventTypes").list();
+    expect(second.find((t) => t.id === created.id)?.name).toBe("Chá de panela");
+    expect(second.some((t) => t.id === "injected")).toBe(false);
+
+    const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
+    expect(stored.eventTypes.find((t: { id: string }) => t.id === created.id).name).toBe("Chá de panela");
+    expect(stored.eventTypes.some((t: { id: string }) => t.id === "injected")).toBe(false);
   });
 
   test("create() fills id but not createdAt for an entity without a createdAt field", () => {
@@ -160,7 +172,8 @@ describe("crud", () => {
     expect(created.id).toBeTruthy();
     expect(created.name).toBe("Chá de bebê");
     expect("createdAt" in created).toBe(false);
-    expect(loadDB().eventTypes.some((t) => t.id === created.id)).toBe(true);
+    const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
+    expect(stored.eventTypes.some((t: { id: string }) => t.id === created.id)).toBe(true);
   });
 
   test("create() fills both id and createdAt for an entity with a createdAt field", () => {
@@ -174,7 +187,8 @@ describe("crud", () => {
 
     expect(created.id).toBeTruthy();
     expect(created.createdAt).toBeTruthy();
-    expect(loadDB().activities.some((a) => a.id === created.id)).toBe(true);
+    const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
+    expect(stored.activities.some((a: { id: string }) => a.id === created.id)).toBe(true);
   });
 
   test("create() on profiles requires the caller to supply userId (no auto id — it mirrors auth.users)", () => {
@@ -186,7 +200,8 @@ describe("crud", () => {
     });
 
     expect(created.userId).toBe("profile-test");
-    expect(loadDB().profiles.some((p) => p.userId === "profile-test")).toBe(true);
+    const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
+    expect(stored.profiles.some((p: { userId: string }) => p.userId === "profile-test")).toBe(true);
   });
 
   test("get() finds a row by id and returns null when missing", () => {
@@ -200,6 +215,17 @@ describe("crud", () => {
     expect(crud("profiles").get("profile-ana")?.name).toBe("Ana Amaral");
   });
 
+  test("get() returns a deep copy — mutating the returned object leaves the store and localStorage untouched", () => {
+    const created = crud("eventTypes").create({ name: "Chá de bebê 2", active: true });
+
+    const fetched = crud("eventTypes").get(created.id)!;
+    fetched.name = "MUTATED";
+
+    expect(crud("eventTypes").get(created.id)?.name).toBe("Chá de bebê 2");
+    const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
+    expect(stored.eventTypes.find((t: { id: string }) => t.id === created.id).name).toBe("Chá de bebê 2");
+  });
+
   test("update() applies a partial patch, persists, and returns the updated row", () => {
     const created = crud("eventTypes").create({ name: "Batizado", active: true });
 
@@ -208,6 +234,19 @@ describe("crud", () => {
     expect(updated).toEqual({ ...created, active: false });
     const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
     expect(stored.eventTypes.find((t: { id: string }) => t.id === created.id).active).toBe(false);
+  });
+
+  test("update() returns a deep copy — mutating the returned row leaves the store and localStorage untouched", () => {
+    const created = crud("eventTypes").create({ name: "Batizado 2", active: true });
+
+    const updated = crud("eventTypes").update(created.id, { active: false });
+    updated.name = "MUTATED";
+
+    expect(crud("eventTypes").get(created.id)?.name).toBe("Batizado 2");
+    const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
+    const storedRow = stored.eventTypes.find((t: { id: string }) => t.id === created.id);
+    expect(storedRow.name).toBe("Batizado 2");
+    expect(storedRow.active).toBe(false);
   });
 
   test("update() of a missing id throws an Error with a pt-BR message", () => {
