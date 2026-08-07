@@ -72,6 +72,10 @@ describe("defaultRouteFor", () => {
     expect(defaultRouteFor(makeRole({ manageFinance: true }))).toBe("/dashboard");
   });
 
+  test("manageFinance outranks manageCrm when both are set (mirrors the seeded Admin role)", () => {
+    expect(defaultRouteFor(makeRole({ manageFinance: true, manageCrm: true }))).toBe("/dashboard");
+  });
+
   test("a role without manageFinance but with manageCrm goes to /crm (comercial)", () => {
     expect(defaultRouteFor(makeRole({ manageCrm: true }))).toBe("/crm");
   });
