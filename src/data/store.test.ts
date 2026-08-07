@@ -406,6 +406,31 @@ describe("convertLead", () => {
       }),
     ).toThrow(/já foi convertido/i);
   });
+
+  test("returns a deep copy — mutating the returned event leaves the store and localStorage untouched", () => {
+    seedAcceptedProposal();
+
+    const result = convertLead({
+      contactId: "contact-x",
+      proposalId: "proposal-x",
+      eventName: "Casamento Teste",
+      eventTypeId: "type-casamento",
+      eventDate: "2026-12-01",
+      eventTime: "18:00",
+    });
+
+    // Mutate the returned object
+    result.name = "hacked";
+
+    // Verify via fresh read from crud
+    const fetched = crud("events").get(result.id)!;
+    expect(fetched.name).toBe("Casamento Teste");
+
+    // Verify via raw localStorage
+    const stored = JSON.parse(localStorage.getItem(DB_KEY)!);
+    const storedEvent = stored.events.find((e: { id: string }) => e.id === result.id);
+    expect(storedEvent.name).toBe("Casamento Teste");
+  });
 });
 
 describe("canInactivateStage", () => {
