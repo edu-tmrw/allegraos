@@ -1,14 +1,15 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CategoriasTab } from "@/pages/configuracoes/categorias-tab";
 import { EtapasTab } from "@/pages/configuracoes/etapas-tab";
+import { ServicosTab } from "@/pages/configuracoes/servicos-tab";
 import { TiposEventoTab } from "@/pages/configuracoes/tipos-evento-tab";
 
 /**
  * Configurações: cadastro tabs shared across the app (Eventos, Financeiro,
- * CRM all read from these). "Serviços" and "Usuárias & papéis" are
- * disabled placeholder triggers — their CRUD lands in Tasks 10/11 — but
- * each still carries a real (if inert) `TabsContent` panel, so wiring the
- * real tab in later is just swapping the child and dropping `disabled`.
+ * CRM all read from these). "Usuárias & papéis" is still a disabled
+ * placeholder trigger — its CRUD lands in Task 11 — but it still carries a
+ * real (if inert) `TabsContent` panel, so wiring the real tab in later is
+ * just swapping the child and dropping `disabled`.
  *
  * The trigger row scrolls horizontally instead of wrapping: at the 375px
  * mobile width, all five labels don't fit, and Radix's `TabsList` sizes to
@@ -29,13 +30,11 @@ export function ConfiguracoesPage() {
             <TabsTrigger value="tipos-evento">Tipos de evento</TabsTrigger>
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
             <TabsTrigger value="etapas">Etapas do funil</TabsTrigger>
+            <TabsTrigger value="servicos">Serviços</TabsTrigger>
             {/* No `title` tooltip here on purpose: a `title` on an element that
                 also has text content wins the accessible name in some a11y-tree
-                computations, which would make both disabled tabs announce as
-                "Em construção" instead of their own (still visible) label. */}
-            <TabsTrigger value="servicos" disabled>
-              Serviços
-            </TabsTrigger>
+                computations, which would make the disabled tab announce as
+                "Em construção" instead of its own (still visible) label. */}
             <TabsTrigger value="usuarias" disabled>
               Usuárias &amp; papéis
             </TabsTrigger>
@@ -52,7 +51,7 @@ export function ConfiguracoesPage() {
           <EtapasTab />
         </TabsContent>
         <TabsContent value="servicos" className="pt-4">
-          <p className="text-muted-foreground">Em construção.</p>
+          <ServicosTab />
         </TabsContent>
         <TabsContent value="usuarias" className="pt-4">
           <p className="text-muted-foreground">Em construção.</p>
