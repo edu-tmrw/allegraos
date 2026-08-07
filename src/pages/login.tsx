@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Wordmark } from "@/components/layout/app-shell";
 import { defaultRouteFor, useAuth } from "@/data/auth";
 import { crud, resetDB } from "@/data/store";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,7 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardContent className="flex flex-col gap-8">
           <div className="flex flex-col items-center gap-2 pt-2 text-center">
-            <h1 className="font-serif text-4xl text-foreground">Allegra</h1>
+            <Wordmark className="text-4xl" />
             <p className="text-sm tracking-wide text-muted-foreground">
               Onde cada detalhe fala de amor
             </p>

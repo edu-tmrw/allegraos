@@ -14,7 +14,8 @@ import { NotFoundPage } from "@/pages/not-found";
 /** `/` has no page of its own — land the user at the top of their role's world. */
 function IndexRedirect() {
   const { user } = useAuth();
-  return <Navigate to={user ? defaultRouteFor(user.role) : "/eventos"} replace />;
+  // user is guaranteed non-null: IndexRedirect is only reachable as a child of AppShell, which guards !user
+  return <Navigate to={defaultRouteFor(user!.role)} replace />;
 }
 
 /**

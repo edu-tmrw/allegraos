@@ -119,7 +119,7 @@ export function AppShell() {
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3 md:hidden">
         <Wordmark compact />
         <div
-          title={user.profile.name}
+          aria-label={user.profile.name}
           className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground"
         >
           {user.profile.name.charAt(0).toUpperCase()}
@@ -185,9 +185,9 @@ export function AppShell() {
   );
 }
 
-function Wordmark({ compact = false }: { compact?: boolean }) {
+export function Wordmark({ compact = false, className }: { compact?: boolean; className?: string }) {
   return (
-    <h1 className={cn("font-serif text-foreground", compact ? "text-2xl" : "text-3xl")}>
+    <h1 className={cn("font-serif text-foreground", compact ? "text-2xl" : "text-3xl", className)}>
       Allegra<span className="text-primary">OS</span>
     </h1>
   );
