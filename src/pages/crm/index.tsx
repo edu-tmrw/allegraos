@@ -9,7 +9,7 @@ import { useEventTypes, useStages } from "@/data/hooks/use-settings";
 import { todayISO } from "@/lib/format";
 import { FollowupsBanner } from "@/pages/crm/followups-banner";
 import { KanbanBoard } from "@/pages/crm/kanban-board";
-import { LeadPanelPlaceholder } from "@/pages/crm/lead-panel-placeholder";
+import { LeadPanel } from "@/pages/crm/lead-panel";
 import { LeadsTable } from "@/pages/crm/leads-table";
 import { NewLeadDialog } from "@/pages/crm/new-lead-dialog";
 import type { EventType } from "@/domain/types";
@@ -21,8 +21,9 @@ type View = "kanban" | "lista";
  * lead, a follow-ups banner on top, "Novo lead", and "Ver arquivados" —
  * which, since archived leads never appear on the board, always forces the
  * lista view while it's on. Selecting a lead (card, row, or banner entry)
- * opens `<LeadPanelPlaceholder>`; Task 19 swaps that stub for the real
- * panel without this page needing to change.
+ * opens `<LeadPanel>` — the editable data/timeline/archive side panel from
+ * Task 19; Task 20 adds the proposals/conversion flow inside it without
+ * this page needing to change.
  */
 export function CrmPage() {
   const [view, setView] = useState<View>("kanban");
@@ -124,7 +125,7 @@ export function CrmPage() {
 
       <NewLeadDialog open={newLeadOpen} onOpenChange={setNewLeadOpen} stages={activeStages} eventTypes={activeEventTypes} />
 
-      <LeadPanelPlaceholder
+      <LeadPanel
         contactId={selectedContactId}
         onOpenChange={(open) => {
           if (!open) setSelectedContactId(null);
