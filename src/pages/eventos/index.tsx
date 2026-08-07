@@ -22,6 +22,7 @@ import type { Evento } from "@/domain/types";
 import { formatDate, formatTime, todayISO } from "@/lib/format";
 import { EventCardFinancials, EventRowFinancials } from "@/pages/eventos/event-financials";
 import { NovoEventoDialog } from "@/pages/eventos/novo-evento-dialog";
+import { StatusBadge } from "@/pages/eventos/status-badge";
 
 type StatusFilter = "all" | "ativo" | "concluido" | "cancelado";
 
@@ -31,12 +32,6 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "concluido", label: "Concluídos" },
   { value: "cancelado", label: "Cancelados" },
 ];
-
-const STATUS_BADGE_LABEL: Record<"ativo" | "concluido" | "cancelado", string> = {
-  ativo: "Ativo",
-  concluido: "Concluído",
-  cancelado: "Cancelado",
-};
 
 /** Diacritics/case-insensitive comparable form of a string, for the client-side name search. */
 function normalize(value: string): string {
@@ -50,24 +45,6 @@ function normalize(value: string): string {
 function formatDateHora(ev: Evento): string {
   const date = formatDate(ev.eventDate);
   return ev.eventTime ? `${date} · ${formatTime(ev.eventTime)}` : date;
-}
-
-function StatusBadge({ status }: { status: "ativo" | "concluido" | "cancelado" }) {
-  if (status === "ativo") {
-    return (
-      <Badge className="border-transparent bg-accent text-accent-foreground">
-        {STATUS_BADGE_LABEL.ativo}
-      </Badge>
-    );
-  }
-  if (status === "concluido") {
-    return <Badge variant="secondary">{STATUS_BADGE_LABEL.concluido}</Badge>;
-  }
-  return (
-    <Badge variant="outline" className="border-destructive/50 text-destructive">
-      {STATUS_BADGE_LABEL.cancelado}
-    </Badge>
-  );
 }
 
 /** Label + shadcn `<Select>` pair, so the three filter dropdowns don't repeat the same five lines each. */
