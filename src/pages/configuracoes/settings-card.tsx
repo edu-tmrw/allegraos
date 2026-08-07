@@ -16,6 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
  * a title/description header with an "Adicionar" action, and either a
  * loading skeleton, an empty state with its own CTA, or the caller's list
  * of `<SettingsRow>`s (each tab supplies its own rows as `children`).
+ *
+ * `footer` is an optional extra note rendered below the rows/empty-state
+ * (e.g. usuárias' "convite real chega na fase de banco" disclaimer) — kept
+ * out of the loading branch so it doesn't compete with the skeleton.
  */
 export function SettingsCard({
   title,
@@ -25,6 +29,7 @@ export function SettingsCard({
   isLoading = false,
   isEmpty,
   emptyMessage,
+  footer,
   children,
 }: {
   title: string;
@@ -34,6 +39,7 @@ export function SettingsCard({
   isLoading?: boolean;
   isEmpty: boolean;
   emptyMessage: string;
+  footer?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -65,6 +71,7 @@ export function SettingsCard({
         ) : (
           <div className="divide-y divide-border">{children}</div>
         )}
+        {!isLoading && footer && <div className="pt-3">{footer}</div>}
       </CardContent>
     </Card>
   );

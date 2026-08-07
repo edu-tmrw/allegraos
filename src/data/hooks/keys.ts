@@ -17,6 +17,8 @@ function key<Name extends string>(name: Name): readonly [Name] {
 }
 
 export const queryKeys = {
+  profiles: key("profiles"),
+  roles: key("roles"),
   eventTypes: key("eventTypes"),
   services: key("services"),
   serviceVariants: key("serviceVariants"),

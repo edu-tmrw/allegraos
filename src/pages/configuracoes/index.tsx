@@ -3,13 +3,14 @@ import { CategoriasTab } from "@/pages/configuracoes/categorias-tab";
 import { EtapasTab } from "@/pages/configuracoes/etapas-tab";
 import { ServicosTab } from "@/pages/configuracoes/servicos-tab";
 import { TiposEventoTab } from "@/pages/configuracoes/tipos-evento-tab";
+import { UsuariasTab } from "@/pages/configuracoes/usuarias-tab";
 
 /**
  * Configurações: cadastro tabs shared across the app (Eventos, Financeiro,
- * CRM all read from these). "Usuárias & papéis" is still a disabled
- * placeholder trigger — its CRUD lands in Task 11 — but it still carries a
- * real (if inert) `TabsContent` panel, so wiring the real tab in later is
- * just swapping the child and dropping `disabled`.
+ * CRM all read from these), plus "Usuárias & papéis" — profiles and roles
+ * (RBAC). Every tab here is mock data; usuárias' real email invite only
+ * arrives in the database phase (for now a new profile just logs in from
+ * the login screen with its assigned role).
  *
  * The trigger row scrolls horizontally instead of wrapping: at the 375px
  * mobile width, all five labels don't fit, and Radix's `TabsList` sizes to
@@ -31,13 +32,7 @@ export function ConfiguracoesPage() {
             <TabsTrigger value="categorias">Categorias</TabsTrigger>
             <TabsTrigger value="etapas">Etapas do funil</TabsTrigger>
             <TabsTrigger value="servicos">Serviços</TabsTrigger>
-            {/* No `title` tooltip here on purpose: a `title` on an element that
-                also has text content wins the accessible name in some a11y-tree
-                computations, which would make the disabled tab announce as
-                "Em construção" instead of its own (still visible) label. */}
-            <TabsTrigger value="usuarias" disabled>
-              Usuárias &amp; papéis
-            </TabsTrigger>
+            <TabsTrigger value="usuarias">Usuárias &amp; papéis</TabsTrigger>
           </TabsList>
         </div>
 
@@ -54,7 +49,7 @@ export function ConfiguracoesPage() {
           <ServicosTab />
         </TabsContent>
         <TabsContent value="usuarias" className="pt-4">
-          <p className="text-muted-foreground">Em construção.</p>
+          <UsuariasTab />
         </TabsContent>
       </Tabs>
     </div>
