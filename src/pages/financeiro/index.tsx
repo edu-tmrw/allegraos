@@ -40,6 +40,7 @@ import { useCategories } from "@/data/hooks/use-settings";
 import { useRemoveTransaction, useTransactions, type TransactionFilter } from "@/data/hooks/use-transactions";
 import type { Transaction } from "@/domain/types";
 import { formatBRL, formatDate, formatMonthShort, todayISO } from "@/lib/format";
+import { usePageTitle } from "@/lib/use-page-title";
 
 type KindFilterValue = "all" | "in" | "out";
 type ScopeFilterValue = "all" | "general" | "event";
@@ -180,6 +181,7 @@ function LancamentoActions({
 }
 
 export function FinanceiroPage() {
+  usePageTitle("Financeiro");
   const [monthOverride, setMonthOverride] = useState<string | null>(null);
   const [kindFilter, setKindFilter] = useState<KindFilterValue>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");

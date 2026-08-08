@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePageTitle } from "@/lib/use-page-title";
 import { CategoriasTab } from "@/pages/configuracoes/categorias-tab";
 import { EtapasTab } from "@/pages/configuracoes/etapas-tab";
 import { ServicosTab } from "@/pages/configuracoes/servicos-tab";
@@ -18,6 +19,7 @@ import { UsuariasTab } from "@/pages/configuracoes/usuarias-tab";
  * `overflow-x-auto` div is enough to make it a swipeable strip.
  */
 export function ConfiguracoesPage() {
+  usePageTitle("Configurações");
   return (
     <div className="space-y-6">
       <div className="space-y-1">

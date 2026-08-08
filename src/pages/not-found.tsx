@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
+import { usePageTitle } from "@/lib/use-page-title";
 
 /** Catch-all for any authenticated path that doesn't match a route. */
 export function NotFoundPage() {
+  usePageTitle("Página não encontrada");
   const navigate = useNavigate();
 
   return (

@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCreateTeamMember, useTeamMembers, useUpdateTeamMember } from "@/data/hooks/use-team";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 import type { TeamMember } from "@/domain/types";
 
 const teamMemberSchema = z.object({
@@ -174,6 +175,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 }
 
 export function EquipePage() {
+  usePageTitle("Equipe");
   const { data: members } = useTeamMembers();
   const updateMember = useUpdateTeamMember();
   const [dialogOpen, setDialogOpen] = useState(false);
