@@ -151,14 +151,20 @@ export function ServiceDonut({ serviceSales }: { serviceSales: ServiceSaleRow[] 
         </div>
       </div>
 
-      <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2 md:flex-col md:items-start md:justify-center">
+      {/* `min-w-0 md:flex-1` gives this block a definite, shrinkable width
+          once it shares the row with the fixed 260px donut (rather than the
+          shrink-to-fit default that let a long service name push past the
+          card's edge) — the actual ellipsis then happens per-item below. */}
+      <ul className="flex min-w-0 flex-wrap justify-center gap-x-4 gap-y-2 md:flex-1 md:flex-col md:items-start md:justify-center">
         {slices.map((slice, index) => {
           const pct = totalCents > 0 ? Math.round((slice.totalCents / totalCents) * 100) : 0;
           return (
-            <li key={slice.id} className="flex items-center gap-2 text-sm">
+            <li key={slice.id} className="flex w-full min-w-0 items-center gap-2 text-sm">
               <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: fillFor(slice, index) }} />
-              <span className="text-foreground">{slice.name}</span>
-              <span className="text-muted-foreground">{pct}%</span>
+              <span className="min-w-0 flex-1 truncate text-foreground" title={slice.name}>
+                {slice.name}
+              </span>
+              <span className="shrink-0 text-muted-foreground">{pct}%</span>
             </li>
           );
         })}

@@ -110,7 +110,10 @@ export function RevenueProfitChart({ data }: { data: FlowPoint[] }) {
           tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
-          width={56}
+          // Wide enough for the longest realistic tick, "-R$ 3,5 mil" (a
+          // loss month) — 56 clipped its leading "-R$" once a monthly value
+          // actually went negative.
+          width={76}
         />
         <Tooltip content={FlowTooltip} />
         <Legend

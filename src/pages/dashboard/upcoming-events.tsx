@@ -1,6 +1,6 @@
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useNavigate } from "react-router";
+import { Link } from "react-router";
 import { Money } from "@/components/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEventFinancials } from "@/data/hooks/use-events";
@@ -14,17 +14,19 @@ import type { Evento } from "@/domain/types";
  * within a single component.
  */
 function UpcomingEventRow({ evento }: { evento: Evento }) {
-  const navigate = useNavigate();
   const financials = useEventFinancials(evento.id);
   const date = parseISO(evento.eventDate);
   const diffDays = differenceInCalendarDays(date, parseISO(todayISO()));
 
   return (
     <li>
-      <button
-        type="button"
-        onClick={() => navigate(`/eventos/${evento.id}`)}
-        className="flex w-full items-start gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-muted"
+      {/* A real `<Link>`, not a `<button onClick={navigate}>` — this is a
+          plain row-to-page link (no drag/table semantics in the way, unlike
+          `eventos/index.tsx`'s rows), so it can and should support
+          middle-click/"open in new tab" like any other link. */}
+      <Link
+        to={`/eventos/${evento.id}`}
+        className="flex w-full items-start gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         <div className="w-11 shrink-0 pt-0.5 text-center font-serif">
           <div className="text-lg leading-none text-foreground">{format(date, "dd")}</div>
@@ -46,7 +48,7 @@ function UpcomingEventRow({ evento }: { evento: Evento }) {
             </span>
           </div>
         </div>
-      </button>
+      </Link>
     </li>
   );
 }

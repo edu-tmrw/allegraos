@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Money } from "@/components/money";
 import { useDashboardData, type DashboardPeriod } from "@/data/hooks/use-dashboard";
+import { usePageTitle } from "@/lib/use-page-title";
 import { CategoryBars } from "@/pages/dashboard/category-bars";
 import { RevenueProfitChart } from "@/pages/dashboard/revenue-profit-chart";
 import { ServiceDonut } from "@/pages/dashboard/service-donut";
@@ -35,6 +36,7 @@ function DashboardSkeleton() {
  * not up here next to the page title, to keep its scope honest.
  */
 export function DashboardPage() {
+  usePageTitle("Dashboard");
   const [period, setPeriod] = useState<DashboardPeriod>("year");
   const data = useDashboardData(period);
 
@@ -46,7 +48,11 @@ export function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {/* xl:, not md: — at md/lg widths (e.g. the ~1120px content width a
+              laptop leaves after the sidebar) 4-across leaves each card too
+              narrow for a 6-figure BRL value at text-3xl; 2-up keeps every
+              card roomy until there's genuinely enough width for 4. */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <StatCard label="Caixa atual">
               <Money cents={data.cashCents} />
             </StatCard>
@@ -89,7 +95,13 @@ export function DashboardPage() {
               </Select>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            {/* xl:, not md: — same reasoning as the stat cards' grid above: at
+                md/lg widths this column's card is narrower than the donut's
+                own fixed 260px circle, which left the legend beside it with
+                zero real width (collapsing to an unreadable sliver, not just
+                a tight truncation). One column keeps each chart's card at
+                the full content width until there's genuinely room for two. */}
+            <div className="grid gap-4 xl:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="font-serif text-lg">Contribuição por serviço</CardTitle>
