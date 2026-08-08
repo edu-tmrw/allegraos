@@ -115,7 +115,7 @@ function AddServiceDialog({
     setVariantId(nextVariantId);
     const variant = variantsForSelected.find((candidate) => candidate.id === nextVariantId);
     setPriceCents(variant?.defaultPriceCents ?? 0);
-    setErrors((previous) => ({ ...previous, variant: undefined }));
+    setErrors((previous) => ({ ...previous, variant: undefined, price: undefined }));
   }
 
   function handleSubmit(event: FormEvent) {
@@ -189,7 +189,10 @@ function AddServiceDialog({
             <CurrencyInput
               id="service-items-add-valor"
               valueCents={priceCents}
-              onChangeCents={setPriceCents}
+              onChangeCents={(cents) => {
+                setPriceCents(cents);
+                setErrors((previous) => ({ ...previous, price: undefined }));
+              }}
               placeholder="0,00"
             />
             {errors.price && <p className="text-sm text-destructive">{errors.price}</p>}

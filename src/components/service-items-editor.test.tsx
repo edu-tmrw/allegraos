@@ -128,4 +128,29 @@ describe("ServiceItemsEditor", () => {
     renderEditor({ items, discountCents: 400_000 });
     expectMoneyText(screen.getByTestId("valor-do-contrato"), 0);
   });
+
+  test("stale error messages: variant and price errors clear reactively when variant is selected", async () => {
+    const user = userEvent.setup();
+    const { onAdd } = renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Adicionar serviço" }));
+
+    // Select Orquestra (variant-priced service, no default price)
+    await user.click(screen.getByRole("combobox", { name: "Serviço*" }));
+    await user.click(await screen.findByRole("option", { name: "Orquestra" }));
+
+    // Submit without selecting a variant — both errors appear
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    expect(await screen.findByText("Selecione a variação.")).toBeInTheDocument();
+    expect(screen.getByText("Informe um valor maior que zero.")).toBeInTheDocument();
+    expect(onAdd).not.toHaveBeenCalled();
+
+    // Select a variant — both errors should clear (variant chosen + price prefilled and valid)
+    await user.click(screen.getByRole("combobox", { name: "Variação*" }));
+    await user.click(await screen.findByRole("option", { name: "Trio" }));
+
+    // Both error messages should be gone
+    expect(screen.queryByText("Selecione a variação.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Informe um valor maior que zero.")).not.toBeInTheDocument();
+  });
 });
