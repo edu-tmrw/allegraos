@@ -32,8 +32,8 @@ function UpcomingEventRow({ evento }: { evento: Evento }) {
         to={`/eventos/${evento.id}`}
         className="flex w-full items-start gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
-        <div className="w-11 shrink-0 pt-0.5 text-center font-serif">
-          <div className="text-lg leading-none text-foreground">{format(date, "dd")}</div>
+        <div className="w-11 shrink-0 pt-0.5 text-center">
+          <div className="text-lg font-semibold leading-none tabular-nums text-foreground">{format(date, "dd")}</div>
           <div className="text-[11px] uppercase text-muted-foreground">{format(date, "MMM", { locale: ptBR })}</div>
         </div>
 

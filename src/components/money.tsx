@@ -25,7 +25,10 @@ export function Money({
     <span
       data-slot="money"
       className={cn(
-        "font-semibold tabular-nums",
+        // font-sans de propósito: números nunca herdam a serif estilizada
+        // (algarismos old-style da Cormorant são ruins de ler em valores) —
+        // regra tipográfica do sistema, válida mesmo dentro de headings.
+        "font-sans font-semibold tabular-nums",
         kind === "in" && "text-positive",
         kind === "out" && "text-negative",
         className,
