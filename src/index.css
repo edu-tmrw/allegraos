@@ -11,8 +11,11 @@
   --card-foreground: #25211d;
   --popover: #ffffff;
   --popover-foreground: #25211d;
-  --primary: #c79a61;
-  --primary-foreground: #24180f;
+  /* Bronze profundo (não o dourado médio do site): o mais claro que passa
+     WCAG AA (4.63:1) com texto branco em botões primários. O dourado claro
+     da marca segue vivo em --accent, --ring e nos gráficos. */
+  --primary: #966d36;
+  --primary-foreground: #ffffff;
   --secondary: #f7f0eb;
   --secondary-foreground: #25211d;
   --muted: #f3ede9;
