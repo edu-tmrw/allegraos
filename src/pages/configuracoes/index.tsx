@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/layout/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePageTitle } from "@/lib/use-page-title";
 import { CategoriasTab } from "@/pages/configuracoes/categorias-tab";
@@ -22,10 +23,10 @@ export function ConfiguracoesPage() {
   usePageTitle("Configurações");
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="font-serif text-3xl text-foreground">Configurações</h1>
-        <p className="text-muted-foreground">Cadastros usados em eventos, financeiro e CRM.</p>
-      </div>
+      <PageHeader
+        title="Configurações"
+        subtitle="Cadastros usados em eventos, financeiro e CRM."
+      />
 
       <Tabs defaultValue="tipos-evento">
         <div className="-mx-1 overflow-x-auto px-1">

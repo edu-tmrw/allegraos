@@ -11,6 +11,7 @@ import {
   YAxis,
   type TooltipContentProps,
 } from "recharts";
+import { ChartTooltipFrame } from "@/components/chart-tooltip";
 import { formatBRL, formatMonthShort } from "@/lib/format";
 
 interface FlowPoint {
@@ -72,7 +73,7 @@ function FlowEndLabels({ data }: { data: FlowPoint[] }) {
 function FlowTooltip({ active, payload, label }: TooltipContentProps) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-sm shadow-md">
+    <ChartTooltipFrame>
       <p className="mb-1 font-medium text-foreground">{formatMonthShort(String(label ?? ""))}</p>
       <div className="space-y-1">
         {payload.map((entry, index) => (
@@ -83,7 +84,7 @@ function FlowTooltip({ active, payload, label }: TooltipContentProps) {
           </p>
         ))}
       </div>
-    </div>
+    </ChartTooltipFrame>
   );
 }
 

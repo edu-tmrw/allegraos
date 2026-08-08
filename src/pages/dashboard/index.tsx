@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Money } from "@/components/money";
+import { PageHeader } from "@/components/layout/page-header";
 import { useDashboardData, type DashboardPeriod } from "@/data/hooks/use-dashboard";
 import { usePageTitle } from "@/lib/use-page-title";
 import { CategoryBars } from "@/pages/dashboard/category-bars";
@@ -42,7 +43,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-serif text-3xl text-foreground">Dashboard</h1>
+      <PageHeader title="Dashboard" />
 
       {!data ? (
         <DashboardSkeleton />

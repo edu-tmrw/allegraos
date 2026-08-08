@@ -4,6 +4,8 @@ import { useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useContacts, useDueFollowups } from "@/data/hooks/use-crm";
@@ -24,10 +26,9 @@ type View = "kanban" | "lista";
 function CrmSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl text-foreground">CRM</h1>
+      <PageHeader title="CRM">
         <Skeleton className="h-9 w-32" />
-      </div>
+      </PageHeader>
       <div className="flex gap-4 overflow-x-auto pb-2">
         {Array.from({ length: 4 }, (_, index) => (
           <Skeleton key={index} className="h-64 w-[260px] shrink-0 rounded-lg" />
@@ -142,9 +143,7 @@ export function CrmPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl text-foreground">CRM</h1>
-
+      <PageHeader title="CRM">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <Switch id="ver-arquivados" checked={showArchived} onCheckedChange={setShowArchived} />
@@ -167,20 +166,22 @@ export function CrmPage() {
             Novo lead
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       {followups && followups.length > 0 && (
         <FollowupsBanner followups={followups} onOpenContact={handleOpenContact} />
       )}
 
       {noLeadsAtAll ? (
-        <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-border p-12 text-center">
-          <p className="text-muted-foreground">Nenhum lead cadastrado ainda.</p>
-          <Button type="button" onClick={() => setNewLeadOpen(true)}>
-            <Plus className="size-4" />
-            Novo lead
-          </Button>
-        </div>
+        <EmptyState
+          title="Nenhum lead cadastrado ainda."
+          action={
+            <Button type="button" onClick={() => setNewLeadOpen(true)}>
+              <Plus className="size-4" />
+              Novo lead
+            </Button>
+          }
+        />
       ) : effectiveView === "kanban" ? (
         <KanbanBoard
           stages={activeStages}

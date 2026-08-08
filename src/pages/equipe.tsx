@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -160,20 +162,6 @@ function EquipeSkeleton() {
   );
 }
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-        <p className="text-muted-foreground">Nenhuma pessoa na equipe ainda.</p>
-        <Button type="button" onClick={onAdd}>
-          <Plus className="size-4" />
-          Adicionar pessoa
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function EquipePage() {
   usePageTitle("Equipe");
   const { data: members } = useTeamMembers();
@@ -197,18 +185,25 @@ export function EquipePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl text-foreground">Equipe</h1>
+      <PageHeader title="Equipe">
         <Button type="button" onClick={handleAdd}>
           <Plus className="size-4" />
           Adicionar pessoa
         </Button>
-      </div>
+      </PageHeader>
 
       {!members ? (
         <EquipeSkeleton />
       ) : members.length === 0 ? (
-        <EmptyState onAdd={handleAdd} />
+        <EmptyState
+          title="Nenhuma pessoa na equipe ainda."
+          action={
+            <Button type="button" onClick={handleAdd}>
+              <Plus className="size-4" />
+              Adicionar pessoa
+            </Button>
+          }
+        />
       ) : (
         <>
           {/* Desktop md+: one table, name/função full-strength text that
