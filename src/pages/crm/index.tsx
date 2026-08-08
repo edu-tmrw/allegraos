@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useContacts, useDueFollowups } from "@/data/hooks/use-crm";
 import { useEventTypes, useStages } from "@/data/hooks/use-settings";
 import { todayISO } from "@/lib/format";
+import { usePageTitle } from "@/lib/use-page-title";
 import { FollowupsBanner } from "@/pages/crm/followups-banner";
 import { KanbanBoard } from "@/pages/crm/kanban-board";
 import { LeadPanel } from "@/pages/crm/lead-panel";
@@ -15,6 +17,23 @@ import { NewLeadDialog } from "@/pages/crm/new-lead-dialog";
 import type { EventType } from "@/domain/types";
 
 type View = "kanban" | "lista";
+
+/** Loading placeholder for the first paint. Without this, `stages` defaulted to `[]` before `useStages()` actually resolved, so `<KanbanBoard>`'s own "Configure as etapas do funil" empty state could flash on every fresh page load, before there was any real signal that stages were missing rather than just not-yet-loaded. */
+function CrmSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="font-serif text-3xl text-foreground">CRM</h1>
+        <Skeleton className="h-9 w-32" />
+      </div>
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-64 w-[260px] shrink-0 rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * The CRM pipeline screen: kanban (default) or lista of every non-archived
@@ -26,6 +45,7 @@ type View = "kanban" | "lista";
  * this page needing to change.
  */
 export function CrmPage() {
+  usePageTitle("CRM");
   const [view, setView] = useState<View>("kanban");
   const [showArchived, setShowArchived] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
@@ -56,6 +76,15 @@ export function CrmPage() {
     }
     return ids;
   }, [followups]);
+
+  // Deliberately not `contactsQuery.isLoading` too: that query re-fires (a
+  // genuinely new key) every time "Ver arquivados" flips, and gating the
+  // whole page on it would flash this full skeleton on every toggle instead
+  // of just updating the list — `noLeadsAtAll` below already handles that
+  // query's own loading window without losing the header controls.
+  if (stagesQuery.isLoading || eventTypesQuery.isLoading) {
+    return <CrmSkeleton />;
+  }
 
   const effectiveView: View = showArchived ? "lista" : view;
   const noLeadsAtAll = !showArchived && contactsQuery.isSuccess && contacts.length === 0;

@@ -34,6 +34,7 @@ import { useEventTypes } from "@/data/hooks/use-settings";
 import { eventStatus } from "@/domain/calc";
 import type { Evento } from "@/domain/types";
 import { formatTime, todayISO } from "@/lib/format";
+import { usePageTitle } from "@/lib/use-page-title";
 import { DetalheLancamentos } from "@/pages/eventos/detalhe-lancamentos";
 import { EventoFinancialCards } from "@/pages/eventos/detalhe-financials";
 import { DetalheServicos } from "@/pages/eventos/detalhe-servicos";
@@ -46,7 +47,8 @@ function formatEventDateLong(ev: Evento): string {
   return ev.eventTime ? `${date} · ${formatTime(ev.eventTime)}` : date;
 }
 
-function DetalheSkeleton() {
+/** `showFinance` mirrors the real page's own `manageFinance` gate on `<EventoFinancialCards>` — a Comercial profile shouldn't see 5 finance-card placeholders flash by for a section it will never actually get. */
+function DetalheSkeleton({ showFinance }: { showFinance: boolean }) {
   return (
     <div className="space-y-6">
       <Skeleton className="h-8 w-28" />
@@ -55,11 +57,13 @@ function DetalheSkeleton() {
         <Skeleton className="h-5 w-40" />
         <Skeleton className="h-7 w-80" />
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton key={index} className="h-20" />
-        ))}
-      </div>
+      {showFinance && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="h-20" />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -72,6 +76,9 @@ export function EventoDetalhePage() {
 
   const { data: event } = useEvent(id);
   const { data: eventTypes } = useEventTypes();
+  // The event's own name once it's loaded ("Evento" while loading/missing) —
+  // more useful in a browser tab than a static "Evento" when several are open.
+  usePageTitle(event ? event.name : "Evento");
 
   const [editOpen, setEditOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState("");
@@ -89,7 +96,7 @@ export function EventoDetalhePage() {
   }, [event?.id, event?.notes]);
 
   if (event === undefined) {
-    return <DetalheSkeleton />;
+    return <DetalheSkeleton showFinance={manageFinance} />;
   }
 
   if (event === null) {

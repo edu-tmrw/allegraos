@@ -129,6 +129,10 @@ export function LeadPanel({
 function PanelSkeleton() {
   return (
     <div className="flex flex-col gap-4 p-4">
+      {/* Radix's `Dialog.Title` (which `<Sheet>` wraps) is required in every
+          rendered content tree, or it warns in dev — visually hidden since
+          the skeleton bar right below already stands in for a heading. */}
+      <SheetTitle className="sr-only">Carregando lead…</SheetTitle>
       <Skeleton className="h-7 w-2/3" />
       <Skeleton className="h-4 w-1/3" />
       <Skeleton className="h-48 w-full" />
@@ -450,7 +454,12 @@ function TimelineSection({ contactId, activities }: { contactId: string; activit
               aria-label="Data do follow-up"
               className="w-auto"
             />
-            <Button type="button" size="sm" onClick={handleAddFollowup} disabled={!content.trim() || addActivity.isPending}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleAddFollowup}
+              disabled={!content.trim() || !followupDate || addActivity.isPending}
+            >
               Confirmar
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setShowFollowupDate(false)}>

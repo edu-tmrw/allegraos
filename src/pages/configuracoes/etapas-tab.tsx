@@ -142,7 +142,7 @@ export function EtapasTab() {
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  disabled={index === 0}
+                  disabled={index === 0 || reorderMutation.isPending}
                   onClick={() => move(index, -1)}
                   aria-label={`Mover ${stage.name} para cima`}
                 >
@@ -152,7 +152,7 @@ export function EtapasTab() {
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  disabled={index === stages.length - 1}
+                  disabled={index === stages.length - 1 || reorderMutation.isPending}
                   onClick={() => move(index, 1)}
                   aria-label={`Mover ${stage.name} para baixo`}
                 >

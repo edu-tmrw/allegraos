@@ -4,7 +4,7 @@
  * always exactly what `useEvents()` returns (eventDate/eventTime/name asc)
  * — filtering narrows the array but never re-sorts it.
  */
-import { type ReactNode, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { usePerms } from "@/data/auth";
 import { useEvents } from "@/data/hooks/use-events";
@@ -20,6 +21,8 @@ import { useEventTypes } from "@/data/hooks/use-settings";
 import { eventStatus } from "@/domain/calc";
 import type { Evento } from "@/domain/types";
 import { formatDate, formatTime, todayISO } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 import { EventCardFinancials, EventRowFinancials } from "@/pages/eventos/event-financials";
 import { NovoEventoDialog } from "@/pages/eventos/novo-evento-dialog";
 import { StatusBadge } from "@/pages/eventos/status-badge";
@@ -45,6 +48,16 @@ function normalize(value: string): string {
 function formatDateHora(ev: Evento): string {
   const date = formatDate(ev.eventDate);
   return ev.eventTime ? `${date} · ${formatTime(ev.eventTime)}` : date;
+}
+
+/** Row-as-button classes shared by the desktop `<TableRow>` and mobile `<Card>` — same focus ring `<Button>` uses. */
+const CLICKABLE_ROW_CLASS = "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
+
+/** Enter/Space activates a row that's a `role="button"` on a non-button element (a table row can't be a real `<button>`/`<a>`) — clicking it already navigates via `onClick`. */
+function onRowKeyDown(event: KeyboardEvent<HTMLElement>, activate: () => void) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  activate();
 }
 
 /** Label + shadcn `<Select>` pair, so the three filter dropdowns don't repeat the same five lines each. */
@@ -87,7 +100,31 @@ function EmptyState({ title, action }: { title: string; action?: ReactNode }) {
   );
 }
 
+/** Loading placeholder for the very first paint (`events`/`eventTypes` both still `undefined`) — the page previously just showed the bare "Eventos" heading with nothing else while this settled. */
+function EventosSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="font-serif text-3xl text-foreground">Eventos</h1>
+        <Skeleton className="h-9 w-36" />
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <Skeleton className="h-9 w-full sm:w-64" />
+        <Skeleton className="h-9 w-[150px]" />
+        <Skeleton className="h-9 w-[150px]" />
+        <Skeleton className="h-9 w-[150px]" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton key={index} className="h-12 w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function EventosPage() {
+  usePageTitle("Eventos");
   const { manageEvents, manageFinance } = usePerms();
   const navigate = useNavigate();
   const today = todayISO();
@@ -102,11 +139,7 @@ export function EventosPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   if (!events || !eventTypes) {
-    return (
-      <div className="space-y-2">
-        <h1 className="font-serif text-3xl text-foreground">Eventos</h1>
-      </div>
-    );
+    return <EventosSkeleton />;
   }
 
   const eventTypesById = new Map(eventTypes.map((type) => [type.id, type.name]));
@@ -138,7 +171,10 @@ export function EventosPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-3xl text-foreground">Eventos</h1>
-        {manageEvents && novoEventoButton}
+        {/* Only while the list already has events — with zero events, the
+            empty state below owns the one "Novo evento" CTA, so it's not
+            duplicated on screen. */}
+        {manageEvents && hasAnyEvents && novoEventoButton}
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -215,10 +251,17 @@ export function EventosPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((ev) => (
+                  // No `role="button"` here — it would replace the `<tr>`'s
+                  // implicit "row" role (screen readers would stop
+                  // announcing it as part of the table at all, and
+                  // `getAllByRole("row")` stopped finding it too). `tabIndex`
+                  // + `onKeyDown` alone still make it keyboard-operable.
                   <TableRow
                     key={ev.id}
-                    className="cursor-pointer"
+                    tabIndex={0}
+                    className={cn("cursor-pointer", CLICKABLE_ROW_CLASS)}
                     onClick={() => navigate(`/eventos/${ev.id}`)}
+                    onKeyDown={(event) => onRowKeyDown(event, () => navigate(`/eventos/${ev.id}`))}
                   >
                     <TableCell>
                       <div className="flex flex-col gap-1">
@@ -244,8 +287,11 @@ export function EventosPage() {
             {filtered.map((ev) => (
               <Card
                 key={ev.id}
-                className="cursor-pointer transition-colors hover:border-primary/40"
+                role="button"
+                tabIndex={0}
+                className={cn("cursor-pointer transition-colors hover:border-primary/40", CLICKABLE_ROW_CLASS)}
                 onClick={() => navigate(`/eventos/${ev.id}`)}
+                onKeyDown={(event) => onRowKeyDown(event, () => navigate(`/eventos/${ev.id}`))}
               >
                 <CardContent className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-3">
