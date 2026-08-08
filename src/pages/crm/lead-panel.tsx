@@ -351,7 +351,7 @@ function LeadPanelContent({
 
         <TimelineSection contactId={contact.id} activities={activities} />
 
-        <LeadProposals />
+        <LeadProposals contactId={contact.id} onOpenChange={onOpenChange} />
       </div>
 
       <SheetFooter className="border-t border-border">
