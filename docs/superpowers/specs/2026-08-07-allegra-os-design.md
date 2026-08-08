@@ -171,9 +171,9 @@ Navegação: sidebar (desktop) / drawer + bottom bar (mobile). **Mobile-first** 
 O site institucional já é um tema shadcn/Tailwind — o sistema **herda os tokens 1:1** (vibe premium da marca):
 
 ```css
---background: #fcfaf6;  --foreground: #25211d;
+--background: #fcfaf6;  --foreground: #4a3826;  /* espresso — sem preto no sistema (ajuste pós-F1), 11:1 no branco */
 --primary: #966d36;     --primary-foreground: #ffffff;   /* bronze profundo, AA 4.63:1 c/ branco (ajuste pós-F1; dourado claro segue em --accent/--ring/gráficos) */
---secondary: #f7f0eb;   --muted: #f3ede9;  --muted-foreground: #6a615b;
+--secondary: #f7f0eb;   --muted: #f3ede9;  --muted-foreground: #75604a;  /* cobre-taupe, 6:1 */
 --accent: #ead8bd;      --accent-foreground: #3a281a;
 --destructive: #de3b3d; --border: #e3ddd8; --input: #e9e3df; --ring: #b88952;
 --radius: .75rem;
