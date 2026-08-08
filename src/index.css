@@ -74,6 +74,15 @@
 }
 
 @layer base {
+  /* Tailwind v4 defaults border-color to currentColor; restore the soft theme token
+     app-wide so bare `border`/`border-b` utilities never render near-black lines. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    border-color: var(--color-border);
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
