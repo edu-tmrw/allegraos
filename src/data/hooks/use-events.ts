@@ -90,6 +90,9 @@ export function useCreateEvent() {
         notes: null,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.events }),
+    // Every current call site (`NovoEventoDialog`) already toasts its own
+    // error — see `src/main.tsx`'s global `MutationCache` for what this flag means.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -99,6 +102,8 @@ export function useUpdateEvent() {
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Evento> }) => crud("events").update(id, patch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.events }),
+    // Both call sites (notes save in `detalhe.tsx`, `EditarEventoDialog`) already toast their own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -108,6 +113,8 @@ export function useCancelEvent() {
   return useMutation({
     mutationFn: async (id: string) => crud("events").update(id, { canceled: true }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.events }),
+    // `detalhe.tsx`'s cancel confirmation already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -117,6 +124,8 @@ export function useReactivateEvent() {
   return useMutation({
     mutationFn: async (id: string) => crud("events").update(id, { canceled: false }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.events }),
+    // `detalhe.tsx`'s "Reativar evento" button already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -127,6 +136,8 @@ export function useSetEventDiscount() {
     mutationFn: async ({ eventId, discountCents }: { eventId: string; discountCents: number }) =>
       crud("events").update(eventId, { discountCents }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.events }),
+    // `detalhe-servicos.tsx`'s discount editor already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -139,6 +150,8 @@ export function useAddEventService() {
       queryClient.invalidateQueries({ queryKey: queryKeys.eventServices });
       queryClient.invalidateQueries({ queryKey: queryKeys.events });
     },
+    // `detalhe-servicos.tsx`'s `handleAdd` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -164,6 +177,8 @@ export function useRemoveEventService() {
       queryClient.invalidateQueries({ queryKey: queryKeys.eventServices });
       queryClient.invalidateQueries({ queryKey: queryKeys.events });
     },
+    // `detalhe-servicos.tsx`'s `handleRemove` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
