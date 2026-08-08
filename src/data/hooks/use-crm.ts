@@ -88,7 +88,10 @@ function useAllContacts() {
  * soonest-due first. `undefined` while either source query is loading. An
  * activity whose `contactId` doesn't resolve (shouldn't happen — seed and
  * `useAddActivity` both guarantee it) is silently skipped rather than
- * crashing on a missing join.
+ * crashing on a missing join. A resolved contact that's archived is skipped
+ * too — an archived lead is off the board entirely, so its follow-ups
+ * shouldn't resurface in the banner just because nobody marked them done
+ * before archiving.
  */
 export function useDueFollowups(): { activity: Activity; contact: Contact }[] | undefined {
   const activitiesQuery = useAllActivities();
@@ -106,7 +109,7 @@ export function useDueFollowups(): { activity: Activity; contact: Contact }[] | 
     for (const activity of activities) {
       if (activity.done || activity.dueDate === null || activity.dueDate > today) continue;
       const contact = contactById.get(activity.contactId);
-      if (!contact) continue;
+      if (!contact || contact.archived) continue;
       due.push({ activity, contact, dueDate: activity.dueDate });
     }
 

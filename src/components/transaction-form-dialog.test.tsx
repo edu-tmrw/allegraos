@@ -117,6 +117,38 @@ describe("TransactionFormDialog", () => {
     expect(screen.getByRole("button", { name: "Salvar alterações" })).toBeEnabled();
   });
 
+  test("unlocked mode's Evento select includes a canceled event (suffixed '(cancelado)'), and selecting it still shows the aviso and allows submit", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    // Casamento Camila & Pedro — canceled, kept its 2 historical transactions
+    // (see seed.ts). Before this fix, an UNSELECTED canceled event was
+    // filtered out of the options entirely; now every event is offered, a
+    // canceled one just carries the same "(cancelado)" suffix
+    // `financeiro/index.tsx`'s own escopo-evento filter already uses.
+    const CANCELED_EVENT_ID = "event-casamento-cancelado";
+    const canceledEvent = crud("events").get(CANCELED_EVENT_ID)!;
+
+    renderDialog({ onOpenChange });
+
+    await user.click(screen.getByRole("combobox", { name: "Evento" }));
+    const canceledOption = await screen.findByRole("option", { name: `${canceledEvent.name} (cancelado)` });
+    await user.click(canceledOption);
+
+    expect(
+      await screen.findByText("Este evento está cancelado — o lançamento entra no histórico (ex.: devolução)."),
+    ).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Valor*"), "10000");
+    await user.click(screen.getByRole("button", { name: "Registrar lançamento" }));
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+
+    const created = crud("transactions")
+      .list()
+      .find((tx) => tx.eventId === CANCELED_EVENT_ID && tx.amountCents === 10_000);
+    expect(created).toBeDefined();
+  });
+
   test("edit-submit flow: changing amount and description, then submitting, updates the transaction while preserving createdBy and createdAt", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

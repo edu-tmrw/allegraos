@@ -1,10 +1,11 @@
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router";
 import { Money } from "@/components/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEventFinancials } from "@/data/hooks/use-events";
 import { formatTime, todayISO } from "@/lib/format";
+import { daysUntilLabelOrToday } from "@/lib/relative-days";
 import type { Evento } from "@/domain/types";
 
 /**
@@ -16,7 +17,10 @@ import type { Evento } from "@/domain/types";
 function UpcomingEventRow({ evento }: { evento: Evento }) {
   const financials = useEventFinancials(evento.id);
   const date = parseISO(evento.eventDate);
-  const diffDays = differenceInCalendarDays(date, parseISO(todayISO()));
+  // "hoje" (not suppressed) for a day-of event — this list has no separate
+  // status indicator the way the event detail page does, so the line always
+  // has something worth saying.
+  const diasLabel = daysUntilLabelOrToday(evento.eventDate, todayISO());
 
   return (
     <li>
@@ -41,7 +45,7 @@ function UpcomingEventRow({ evento }: { evento: Evento }) {
           <p className="truncate font-medium text-foreground">{evento.name}</p>
           <div className="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
             <span className="text-muted-foreground">
-              {formatTime(evento.eventTime)} · em {diffDays} dias
+              {formatTime(evento.eventTime)} · {diasLabel}
             </span>
             <span className="text-muted-foreground">
               A receber: {financials ? <Money cents={financials.receivableCents} /> : <Skeleton className="inline-block h-4 w-20 align-middle" />}

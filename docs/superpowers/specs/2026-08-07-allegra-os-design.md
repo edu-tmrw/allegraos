@@ -93,7 +93,7 @@ Sem origem do dinheiro, sem transferências, sem encerramento financeiro, sem pr
 
 ### CRM
 
-**`contacts`** — `name`, `phone null`, `email null`, `event_type_id fk null` (interesse), `stage_id fk`, `archived boolean default false` (descarte), `notes null`, `created_by`. Lead "ganho" = existe evento com `contact_id` dele (sem coluna própria).
+**`contacts`** — `name`, `phone null`, `email null`, `event_type_id fk null` (interesse), `stage_id fk`, `archived boolean default false` (descarte), `notes null`, `created_by`. Lead "ganho" = existe evento com `contact_id` dele (sem coluna própria). Lead ganho sai do kanban e permanece na Lista com badge GANHO.
 
 **`proposals`** — `contact_id fk`, `sent_date date`, `status: 'sent' | 'accepted' | 'rejected'` default sent, `discount_cents int default 0`, `notes null`. Valor = Σ itens − desconto (derivado).
 

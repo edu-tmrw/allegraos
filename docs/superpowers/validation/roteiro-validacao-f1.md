@@ -76,7 +76,7 @@ Feedback: ______________________________________________________________________
 ## 10. Converter o lead em evento
 
 - [ ] Com a proposta aceita, usar "Converter em evento" → confirmar nome/tipo/data do evento → converter.
-- [ ] Confirmar que o lead some do funil (ganho) e que um evento novo aparece em Eventos com os serviços da proposta já copiados.
+- [ ] Confirmar que o lead some do kanban e aparece na Lista com badge GANHO, e que um evento novo aparece em Eventos com os serviços da proposta já copiados.
 
 Feedback: _______________________________________________________________________
 

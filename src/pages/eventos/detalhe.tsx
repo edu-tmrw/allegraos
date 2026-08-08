@@ -7,10 +7,10 @@
  * com `manageEvents` — qualquer usuário logado pode visualizar a página.
  */
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import { differenceInCalendarDays, format, parseISO } from "date-fns";
+import { Link, useNavigate, useParams } from "react-router";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, HeartHandshake, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,11 +29,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { usePerms } from "@/data/auth";
+import { useContact } from "@/data/hooks/use-crm";
 import { useCancelEvent, useEvent, useReactivateEvent, useUpdateEvent } from "@/data/hooks/use-events";
 import { useEventTypes } from "@/data/hooks/use-settings";
 import { eventStatus } from "@/domain/calc";
 import type { Evento } from "@/domain/types";
 import { formatTime, todayISO } from "@/lib/format";
+import { daysUntilLabel } from "@/lib/relative-days";
 import { usePageTitle } from "@/lib/use-page-title";
 import { DetalheLancamentos } from "@/pages/eventos/detalhe-lancamentos";
 import { EventoFinancialCards } from "@/pages/eventos/detalhe-financials";
@@ -72,10 +74,16 @@ export function EventoDetalhePage() {
   const params = useParams<{ id: string }>();
   const id = params.id ?? "";
   const navigate = useNavigate();
-  const { manageEvents, manageFinance } = usePerms();
+  const { manageEvents, manageFinance, manageCrm } = usePerms();
 
   const { data: event } = useEvent(id);
   const { data: eventTypes } = useEventTypes();
+  // Spec §9: "vínculo lead ↔ evento navegável nos dois sentidos" — this is
+  // the evento → lead direction (the other already exists via the lead
+  // panel's own "Ver evento"). Called unconditionally with the nullable id
+  // (hooks can't be conditional) — `useContact` no-ops to `null` on an empty
+  // id, exactly like `event?.contactId` is before `event` itself loads.
+  const { data: originContact } = useContact(event?.contactId ?? "");
   // The event's own name once it's loaded ("Evento" while loading/missing) —
   // more useful in a browser tab than a static "Evento" when several are open.
   usePageTitle(event ? event.name : "Evento");
@@ -114,8 +122,9 @@ export function EventoDetalhePage() {
   const eventTypesById = new Map((eventTypes ?? []).map((type) => [type.id, type.name]));
   const status = eventStatus(event, todayISO());
   const isCanceled = status === "cancelado";
-  const diasRestantes = differenceInCalendarDays(parseISO(event.eventDate), parseISO(todayISO()));
-  const showDiasRestantes = !isCanceled && diasRestantes > 0;
+  // `null` (not just "0 or negative") for a canceled event too — the status
+  // badge already says "Cancelado", so a redundant "em N dias" would be noise.
+  const diasRestantesLabel = isCanceled ? null : daysUntilLabel(event.eventDate, todayISO());
   const notesUnchanged = notesDraft === (event.notes ?? "");
 
   // An arrow function, not a `function` declaration: TS's narrowing of
@@ -147,10 +156,18 @@ export function EventoDetalhePage() {
           <StatusBadge status={status} />
         </div>
         <p className="font-serif text-xl text-foreground sm:text-2xl">{formatEventDateLong(event)}</p>
-        {showDiasRestantes && (
-          <p className="text-sm text-muted-foreground">
-            em {diasRestantes} {diasRestantes === 1 ? "dia" : "dias"}
-          </p>
+        {diasRestantesLabel !== null && (
+          <p className="text-sm text-muted-foreground">{diasRestantesLabel}</p>
+        )}
+        {/* Only once the lead itself resolves (never for a tick with no name to show), and only for a role that can actually open the CRM to follow it. */}
+        {event.contactId !== null && manageCrm && originContact && (
+          <Link
+            to={`/crm?lead=${event.contactId}`}
+            className="inline-flex items-center gap-1 text-sm text-primary underline-offset-2 hover:underline"
+          >
+            <HeartHandshake className="size-3.5" />
+            Origem: {originContact.name}
+          </Link>
         )}
       </div>
 

@@ -241,7 +241,10 @@ function LeadPanelContent({
           </div>
           {evento && (
             <div className="flex shrink-0 flex-col items-end gap-1">
-              <Badge data-testid="ganho-badge">GANHO</Badge>
+              {/* Same accent treatment as `<StatusBadge status="ativo">`/"Aceita" proposals — this codebase's convention for a positive/success state — and mirrored by `<LeadsTable>`'s own GANHO badge for the identical signal. */}
+              <Badge data-testid="ganho-badge" className="border-transparent bg-accent text-accent-foreground">
+                GANHO
+              </Badge>
               <button
                 type="button"
                 onClick={handleViewEvent}

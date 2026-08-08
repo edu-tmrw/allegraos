@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test } from "vitest";
 import { AuthProvider } from "@/data/auth";
-import { resetDB } from "@/data/store";
+import { crud, resetDB } from "@/data/store";
 import { CrmPage } from "@/pages/crm";
 
 /** Every hook CrmPage uses needs `QueryClientProvider`; `useCreateContact` also needs `useAuth()`'s `<AuthProvider>`. */
@@ -94,6 +94,44 @@ describe("CrmPage — lista view", () => {
     await user.click(await screen.findByRole("option", { name: "Em conversa" }));
 
     await waitFor(() => expect(trigger).toHaveTextContent("Em conversa"));
+  });
+
+  test("a won lead (linked event) is absent from every kanban column and from the lista's stage <Select>, but shows with a GANHO badge in the lista", async () => {
+    const user = userEvent.setup();
+
+    // contact-patricia sits in "Negociação" — link her to a new event via
+    // the store-oracle technique this suite already uses (mirrors
+    // lead-panel.test.tsx's own GANHO fixture): an Evento whose contactId
+    // points back at her is exactly the "ganho" signal both the lead panel
+    // and this page's kanban filtering key off.
+    crud("events").create({
+      name: "Casamento Patrícia & João",
+      eventTypeId: "type-casamento",
+      eventDate: "2026-12-05",
+      eventTime: null,
+      contactId: "contact-patricia",
+      discountCents: 0,
+      canceled: false,
+      notes: null,
+    });
+
+    renderCrmPage();
+
+    // Kanban (default view): every column renders, but Patrícia is in none
+    // of them — not even her own "Negociação" column.
+    const negociacao = await screen.findByTestId("stage-column-stage-negociacao");
+    expect(within(negociacao).queryByText("Patrícia Gomes")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("lead-card-contact-patricia")).not.toBeInTheDocument();
+
+    // Lista: she's still there — timeline/data stays reachable via the
+    // panel — with the GANHO badge and her stage as plain text, not a <Select>.
+    await user.click(await screen.findByRole("tab", { name: "Lista" }));
+
+    const nameButton = await screen.findByRole("button", { name: "Patrícia Gomes" });
+    const row = nameButton.closest("tr")!;
+    expect(within(row).getByTestId("ganho-badge-contact-patricia")).toHaveTextContent("GANHO");
+    expect(within(row).getByText("Negociação")).toBeInTheDocument();
+    expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
   });
 
   test("inline select offers only active stages, not inactive ones", async () => {

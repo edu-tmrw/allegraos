@@ -122,3 +122,45 @@ describe("EventoDetalhePage", () => {
     expect(screen.queryByText("Lançamentos")).not.toBeInTheDocument();
   });
 });
+
+describe("EventoDetalhePage — Origem (vínculo lead ↔ evento)", () => {
+  test("admin sees the 'Origem' link with the linked lead's name", async () => {
+    // The seeded event starts with no contactId — link it to a real seeded
+    // lead via the store oracle (mirrors lead-panel.test.tsx's own GANHO
+    // fixture), the spec §9 "ganho" signal (`contactId` pointing back at a
+    // contact) `useContactEvent`/this page's own `useContact` key off.
+    crud("events").update(SEEDED_EVENT_ID, { contactId: "contact-patricia" });
+
+    renderDetalhe(SEEDED_EVENT_ID, "profile-ana");
+    const event = crud("events").get(SEEDED_EVENT_ID)!;
+
+    expect(await screen.findByRole("heading", { name: event.name, level: 1 })).toBeInTheDocument();
+    const link = await screen.findByRole("link", { name: /Origem: Patrícia Gomes/ });
+    expect(link).toHaveAttribute("href", "/crm?lead=contact-patricia");
+  });
+
+  test("no Origem link when the event has no linked contact", async () => {
+    renderDetalhe(SEEDED_EVENT_ID, "profile-ana");
+    const event = crud("events").get(SEEDED_EVENT_ID)!;
+
+    expect(await screen.findByRole("heading", { name: event.name, level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Origem:/ })).not.toBeInTheDocument();
+  });
+
+  test("Bia, with manageCrm turned off for her role (Comercial), doesn't see the Origem link even though the event has a linked lead", async () => {
+    crud("events").update(SEEDED_EVENT_ID, { contactId: "contact-patricia" });
+    // Comercial's own manageCrm is true by default (see seed.ts) — flip it
+    // off here via the same store-oracle technique
+    // usuarias.test.tsx uses to prove this exact permission is what gates
+    // Comercial's CRM access, so this test genuinely exercises `manageCrm:
+    // false` rather than relying on a role shape that doesn't exist in the
+    // seed.
+    crud("roles").update("role-comercial", { manageCrm: false });
+
+    renderDetalhe(SEEDED_EVENT_ID, "profile-bia");
+    const event = crud("events").get(SEEDED_EVENT_ID)!;
+
+    expect(await screen.findByRole("heading", { name: event.name, level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Origem:/ })).not.toBeInTheDocument();
+  });
+});

@@ -9,10 +9,13 @@ import type { Contact, EventType, PipelineStage } from "@/domain/types";
 /**
  * The alternate, non-board view of the pipeline — also the only view
  * "Ver arquivados" ever shows, since archived leads never appear in the
- * kanban. In archived mode the stage is plain text (moving an archived
- * lead makes no sense) and each row carries an "Arquivado" badge; otherwise
- * the stage cell is a live `<Select>` wired straight to
- * `useMoveContactStage`.
+ * kanban, and the only place a "ganho" lead (converted into an event) is
+ * still visible at all, since the kanban excludes those too. In archived
+ * mode, or for a won lead, the stage is plain text (moving either one makes
+ * no sense — an archived lead is off the board, a won one has nothing left
+ * to negotiate) instead of the live `<Select>` other rows get; a won row
+ * also carries a GANHO badge next to its name, mirroring the lead panel's
+ * own badge for the exact same signal.
  */
 export function LeadsTable({
   contacts,
@@ -20,6 +23,7 @@ export function LeadsTable({
   activeStages,
   eventTypesById,
   archived,
+  wonContactIds,
   onOpenContact,
 }: {
   contacts: Contact[];
@@ -27,6 +31,7 @@ export function LeadsTable({
   activeStages: PipelineStage[];
   eventTypesById: Map<string, EventType>;
   archived: boolean;
+  wonContactIds: Set<string>;
   onOpenContact: (contactId: string) => void;
 }) {
   const moveStage = useMoveContactStage();
@@ -55,6 +60,7 @@ export function LeadsTable({
           const eventType = contact.eventTypeId ? eventTypesById.get(contact.eventTypeId) : undefined;
           const stageName = stages.find((stage) => stage.id === contact.stageId)?.name ?? "—";
           const contactLine = [contact.phone, contact.email].filter((value) => value !== null).join(" · ");
+          const won = wonContactIds.has(contact.id);
 
           return (
             <TableRow key={contact.id} className={cn(archived && "text-muted-foreground")}>
@@ -66,6 +72,14 @@ export function LeadsTable({
                 >
                   {contact.name}
                 </button>
+                {won && (
+                  <Badge
+                    data-testid={`ganho-badge-${contact.id}`}
+                    className="ml-2 border-transparent bg-accent text-accent-foreground"
+                  >
+                    GANHO
+                  </Badge>
+                )}
                 {archived && (
                   <Badge variant="outline" className="ml-2">
                     Arquivado
@@ -81,7 +95,7 @@ export function LeadsTable({
                 )}
               </TableCell>
               <TableCell>
-                {archived ? (
+                {archived || won ? (
                   stageName
                 ) : (
                   <Select

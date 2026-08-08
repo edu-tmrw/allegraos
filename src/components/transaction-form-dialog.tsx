@@ -207,7 +207,12 @@ export function TransactionFormDialog({
   const categoryOptions = categoriesByKind[currentKind].filter(
     (category) => category.active || category.id === currentCategoryId,
   );
-  const eventOptions = (events ?? []).filter((ev) => !ev.canceled || ev.id === currentEventValue);
+  // Every event, canceled or not: a canceled one stays selectable (not just
+  // "still shown once already selected") with a " (cancelado)" suffix on
+  // its label — mirrors `financeiro/index.tsx`'s own escopo-evento filter —
+  // rather than being hidden from a lançamento that's exactly the kind of
+  // devolução spec §9 says is allowed. The aviso below covers the warning.
+  const eventOptions = events ?? [];
   // The event currently picked in the UNLOCKED `<Select>` below (undefined
   // while `events` is still loading, or when the sentinel "Administração
   // central" value is selected) — drives the same soft cancellation warning
@@ -379,6 +384,7 @@ export function TransactionFormDialog({
                       {eventOptions.map((ev) => (
                         <SelectItem key={ev.id} value={ev.id}>
                           {ev.name}
+                          {ev.canceled ? " (cancelado)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
