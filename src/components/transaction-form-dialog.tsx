@@ -208,6 +208,12 @@ export function TransactionFormDialog({
     (category) => category.active || category.id === currentCategoryId,
   );
   const eventOptions = (events ?? []).filter((ev) => !ev.canceled || ev.id === currentEventValue);
+  // The event currently picked in the UNLOCKED `<Select>` below (undefined
+  // while `events` is still loading, or when the sentinel "Administração
+  // central" value is selected) — drives the same soft cancellation warning
+  // `lockEvent` mode shows via `lockedEvent`, so editing an old transaction
+  // whose event was canceled since surfaces the same heads-up here too.
+  const selectedEvent = (events ?? []).find((ev) => ev.id === currentEventValue);
 
   /**
    * Setting `kind` and `categoryId` in the very same commit — i.e. both via
@@ -379,6 +385,11 @@ export function TransactionFormDialog({
                   </Select>
                 )}
               />
+              {selectedEvent?.canceled && (
+                <p className="text-sm text-muted-foreground">
+                  Este evento está cancelado — o lançamento entra no histórico (ex.: devolução).
+                </p>
+              )}
             </div>
           )}
 

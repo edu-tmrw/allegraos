@@ -99,4 +99,21 @@ describe("TransactionFormDialog", () => {
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(crud("transactions").list()).toHaveLength(before.length);
   });
+
+  test("unlocked mode shows the same soft cancellation warning as lockEvent when the selected event was canceled since, and still allows submit", async () => {
+    // Casamento Camila & Pedro — canceled, kept its 2 historical
+    // transactions (see seed.ts). Editing one of them opens the dialog
+    // UNLOCKED (no lockEvent) with the Select pre-selecting this canceled
+    // event, mirroring what `lockEvent` mode already warned about.
+    const CANCELED_EVENT_ID = "event-casamento-cancelado";
+    const existingTx = crud("transactions").list().find((tx) => tx.eventId === CANCELED_EVENT_ID)!;
+
+    renderDialog({ transaction: existingTx });
+
+    expect(
+      await screen.findByText("Este evento está cancelado — o lançamento entra no histórico (ex.: devolução)."),
+    ).toBeInTheDocument();
+    // Spec §9: the warning is a heads-up, never a submit block.
+    expect(screen.getByRole("button", { name: "Salvar alterações" })).toBeEnabled();
+  });
 });
