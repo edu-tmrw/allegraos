@@ -116,4 +116,46 @@ describe("TransactionFormDialog", () => {
     // Spec §9: the warning is a heads-up, never a submit block.
     expect(screen.getByRole("button", { name: "Salvar alterações" })).toBeEnabled();
   });
+
+  test("edit-submit flow: changing amount and description, then submitting, updates the transaction while preserving createdBy and createdAt", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+
+    // Find an existing transaction to edit.
+    const existingTx = crud("transactions").list().find((tx) => tx.eventId === SEEDED_EVENT_ID)!;
+    const originalCreatedBy = existingTx.createdBy;
+    const originalCreatedAt = existingTx.createdAt;
+
+    renderDialog({ transaction: existingTx, lockEvent: true, onOpenChange });
+
+    // Wait for the dialog to be ready — the categoria combobox should load the actual category name.
+    const categoriaCombobox = screen.getByRole("combobox", { name: "Categoria*" });
+    const categoryInStore = crud("transactionCategories").get(existingTx.categoryId)!;
+    await waitFor(() => expect(categoriaCombobox).toHaveTextContent(categoryInStore.name));
+
+    // Change the amount — clear the input and type a new value.
+    const amountInput = screen.getByLabelText("Valor*") as HTMLInputElement;
+    await user.clear(amountInput);
+    await user.type(amountInput, "250000"); // R$2,500.00
+
+    // Change the description.
+    const descriptionField = screen.getByLabelText("Descrição") as HTMLTextAreaElement;
+    await user.clear(descriptionField);
+    await user.type(descriptionField, "Updated description");
+
+    // Submit the form.
+    await user.click(screen.getByRole("button", { name: "Salvar alterações" }));
+
+    // Wait for the mutation to complete.
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+
+    // Verify the transaction was updated in the store.
+    const updatedTx = crud("transactions").get(existingTx.id)!;
+    expect(updatedTx.amountCents).toBe(250_000);
+    expect(updatedTx.description).toBe("Updated description");
+
+    // Verify createdBy and createdAt are preserved (unchanged).
+    expect(updatedTx.createdBy).toBe(originalCreatedBy);
+    expect(updatedTx.createdAt).toBe(originalCreatedAt);
+  });
 });

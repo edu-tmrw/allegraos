@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/data/auth";
 import { crud, resetDB } from "@/data/store";
 import type { Transaction } from "@/domain/types";
-import { formatBRL } from "@/lib/format";
+import { formatBRL, formatDate } from "@/lib/format";
 import { FinanceiroPage } from "@/pages/financeiro";
 
 const SESSION_KEY = "allegra-session";
@@ -163,6 +163,52 @@ describe("FinanceiroPage", () => {
 
     expectMoneyText(screen.getByTestId("financeiro-totais-saidas"), beforeTotals.outCents + 10_000);
     const expectedBalance = beforeTotals.inCents - (beforeTotals.outCents + 10_000);
+    expect(normalizeSpace(screen.getByTestId("financeiro-totais-saldo").textContent ?? "")).toContain(
+      normalizeSpace(formatBRL(expectedBalance)),
+    );
+  });
+
+  test("delete flow: clicking the trash button, confirming the AlertDialog, removes the row and updates the totals", async () => {
+    const user = userEvent.setup();
+    renderFinanceiro();
+
+    await selectTodosOsMeses(user);
+
+    const table = await screen.findByRole("table");
+    const allTransactionsBefore = crud("transactions").list();
+    const beforeTotals = sumByKind(allTransactionsBefore);
+
+    // Pick the first seeded transaction to delete.
+    const txToDelete = allTransactionsBefore[0]!;
+    const categoryName = crud("transactionCategories")
+      .list()
+      .find((category) => category.id === txToDelete.categoryId)?.name ?? "";
+    const rowLabel = `${formatDate(txToDelete.date)} — ${categoryName} — ${formatBRL(txToDelete.amountCents)}`;
+
+    // Find and click the trash button for this row.
+    const row = within(table).getByTestId(`lancamento-${txToDelete.id}`);
+    const trashButton = within(row).getByRole("button", { name: `Excluir lançamento: ${rowLabel}` });
+
+    await user.click(trashButton);
+
+    // Confirm the deletion in the AlertDialog.
+    const confirmButton = await screen.findByRole("button", { name: "Excluir" });
+    await user.click(confirmButton);
+
+    // Wait for the row to disappear from the DOM.
+    await waitFor(() => {
+      expect(within(table).queryByTestId(`lancamento-${txToDelete.id}`)).not.toBeInTheDocument();
+    });
+
+    // Assert the transaction is gone from the store.
+    expect(crud("transactions").get(txToDelete.id)).toBeNull();
+
+    // Assert the totals footer updated correctly.
+    const expectedOutCents = txToDelete.kind === "out" ? beforeTotals.outCents - txToDelete.amountCents : beforeTotals.outCents;
+    const expectedInCents = txToDelete.kind === "in" ? beforeTotals.inCents - txToDelete.amountCents : beforeTotals.inCents;
+    expectMoneyText(screen.getByTestId("financeiro-totais-saidas"), expectedOutCents);
+    expectMoneyText(screen.getByTestId("financeiro-totais-entradas"), expectedInCents);
+    const expectedBalance = expectedInCents - expectedOutCents;
     expect(normalizeSpace(screen.getByTestId("financeiro-totais-saldo").textContent ?? "")).toContain(
       normalizeSpace(formatBRL(expectedBalance)),
     );
