@@ -126,7 +126,12 @@ describe("TransactionFormDialog", () => {
     const originalCreatedBy = existingTx.createdBy;
     const originalCreatedAt = existingTx.createdAt;
 
-    renderDialog({ transaction: existingTx, lockEvent: true, onOpenChange });
+    // `defaultEventId` mirrors how `detalhe-lancamentos.tsx` actually opens
+    // this dialog (`lockEvent` always paired with a real event id) — omitting
+    // it here previously meant `onSubmit`'s `defaultEventId ?? null` sent a
+    // `null` eventId on every edit, silently detaching the transaction from
+    // its event.
+    renderDialog({ transaction: existingTx, defaultEventId: SEEDED_EVENT_ID, lockEvent: true, onOpenChange });
 
     // Wait for the dialog to be ready — the categoria combobox should load the actual category name.
     const categoriaCombobox = screen.getByRole("combobox", { name: "Categoria*" });
@@ -157,5 +162,10 @@ describe("TransactionFormDialog", () => {
     // Verify createdBy and createdAt are preserved (unchanged).
     expect(updatedTx.createdBy).toBe(originalCreatedBy);
     expect(updatedTx.createdAt).toBe(originalCreatedAt);
+
+    // Verify eventId is preserved — a locked dialog must never detach the
+    // transaction from its event just because the user only meant to edit
+    // its amount/description.
+    expect(updatedTx.eventId).toBe(SEEDED_EVENT_ID);
   });
 });

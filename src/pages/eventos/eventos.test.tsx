@@ -74,6 +74,22 @@ describe("EventosPage", () => {
     expect(within(table).getByText("Casamento Camila & Pedro")).toBeInTheDocument();
   });
 
+  test("search is diacritics-insensitive: typing \"joao\" finds \"Casamento Patrícia & João\"", async () => {
+    const user = userEvent.setup();
+    renderEventosPage();
+
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("Casamento Patrícia & João")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Buscar"), "joao");
+
+    await waitFor(() => {
+      expect(within(table).getByText("Casamento Patrícia & João")).toBeInTheDocument();
+      expect(within(table).queryByText("Convenção Anual AllTech")).not.toBeInTheDocument();
+      expect(within(table).queryByText("15 Anos de Isabela Ferreira")).not.toBeInTheDocument();
+    });
+  });
+
   test("creating an event via the dialog adds it to the store and navigates to its detail page", async () => {
     const user = userEvent.setup();
     renderEventosPage();

@@ -153,4 +153,27 @@ describe("ServiceItemsEditor", () => {
     expect(screen.queryByText("Selecione a variação.")).not.toBeInTheDocument();
     expect(screen.queryByText("Informe um valor maior que zero.")).not.toBeInTheDocument();
   });
+
+  test("stale error messages: a manual price edit clears the price error on its own, with no variant to reselect", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Adicionar serviço" }));
+
+    // Foto Polaroid has no variants at all — isolates the price-only edit
+    // path from the variant-reselect path the test above already covers.
+    await user.click(screen.getByRole("combobox", { name: "Serviço*" }));
+    await user.click(await screen.findByRole("option", { name: "Foto Polaroid" }));
+
+    const priceInput = screen.getByLabelText("Valor*");
+    expect(priceInput).toHaveValue("1.200,00");
+    await user.clear(priceInput);
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    expect(await screen.findByText("Informe um valor maior que zero.")).toBeInTheDocument();
+
+    // Typing a valid price directly — never touching a variant field — clears it.
+    await user.type(priceInput, "150000");
+    expect(screen.queryByText("Informe um valor maior que zero.")).not.toBeInTheDocument();
+  });
 });

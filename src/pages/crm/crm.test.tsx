@@ -82,7 +82,10 @@ describe("CrmPage — lista view", () => {
     const user = userEvent.setup();
     renderCrmPage();
 
-    await user.click(screen.getByRole("tab", { name: "Lista" }));
+    // findBy, not getBy: the page now renders a loading skeleton for the one
+    // tick before `useStages()`/`useEventTypes()` resolve, so the real tab
+    // isn't necessarily there synchronously on mount.
+    await user.click(await screen.findByRole("tab", { name: "Lista" }));
 
     const trigger = await screen.findByRole("combobox", { name: "Etapa de Fernanda Lima" });
     expect(trigger).toHaveTextContent("Novo contato");
@@ -102,7 +105,10 @@ describe("CrmPage — lista view", () => {
 
     renderCrmPage();
 
-    await user.click(screen.getByRole("tab", { name: "Lista" }));
+    // findBy, not getBy: the page now renders a loading skeleton for the one
+    // tick before `useStages()`/`useEventTypes()` resolve, so the real tab
+    // isn't necessarily there synchronously on mount.
+    await user.click(await screen.findByRole("tab", { name: "Lista" }));
 
     const trigger = await screen.findByRole("combobox", { name: "Etapa de Fernanda Lima" });
     await user.click(trigger);
