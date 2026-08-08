@@ -1,13 +1,6 @@
-import {
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  type PieLabelRenderProps,
-  type TooltipContentProps,
-} from "recharts";
-import { ChartTooltipFrame } from "@/components/chart-tooltip";
+import { useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer, type PieLabelRenderProps } from "recharts";
+import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 
 export interface ServiceSaleRow {
@@ -46,36 +39,18 @@ export function buildDonutData(serviceSales: ServiceSaleRow[]): DonutSlice[] {
 
 /** Fixed slot order, assigned once by descending rank — never re-cycled. */
 const SLICE_FILLS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
-/**
- * Best-available ink (foreground vs. background) for text drawn *inside*
- * each fixed slot's own fill, picked once against the validated palette
- * (gold and "Outros" read better with dark ink; the rest with light ink).
- */
-const SLICE_INKS = [
-  "var(--foreground)",
-  "var(--background)",
-  "var(--background)",
-  "var(--background)",
-  "var(--background)",
-];
 const OTHER_FILL = "var(--chart-other)";
-const OTHER_INK = "var(--foreground)";
 
 function fillFor(slice: DonutSlice, index: number): string {
   return slice.id === OTHER_ID ? OTHER_FILL : SLICE_FILLS[index] ?? OTHER_FILL;
 }
 
-function inkFor(slice: DonutSlice, index: number): string {
-  return slice.id === OTHER_ID ? OTHER_INK : SLICE_INKS[index] ?? OTHER_INK;
-}
-
-/** Direct % label, mid-ring, only for slices >= 8% — text color is picked for contrast against that slice's own fill, never the fill color itself. */
+/** Direct % label, mid-ring, only for slices >= 8% — always white by design (decisão pós-F1: um único ink nas fatias; a legenda ao lado repete o dado com contraste pleno). */
 function makeSliceLabel(slices: DonutSlice[]) {
   return function SliceLabel(props: PieLabelRenderProps) {
     const { cx, cy, midAngle, innerRadius, outerRadius, percent, index } = props;
     if (percent == null || percent < 0.08 || midAngle == null || index == null) return null;
-    const slice = slices[index];
-    if (!slice) return null;
+    if (!slices[index]) return null;
 
     const RAD = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) / 2;
@@ -83,38 +58,27 @@ function makeSliceLabel(slices: DonutSlice[]) {
     const y = cy + radius * Math.sin(-midAngle * RAD);
 
     return (
-      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={600} fill={inkFor(slice, index)}>
+      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={600} fill="#ffffff">
         {Math.round(percent * 100)}%
       </text>
     );
   };
 }
 
-function makeDonutTooltip(totalCents: number) {
-  return function DonutTooltip({ active, payload }: TooltipContentProps) {
-    if (!active || !payload?.length) return null;
-    const slice = payload[0]?.payload as DonutSlice | undefined;
-    if (!slice) return null;
-    const pct = totalCents > 0 ? Math.round((slice.totalCents / totalCents) * 100) : 0;
-    return (
-      <ChartTooltipFrame>
-        <p className="font-medium text-foreground">{slice.name}</p>
-        <p className="text-muted-foreground">
-          <span className="font-medium tabular-nums text-foreground">{formatBRL(slice.totalCents)}</span> · {pct}%
-        </p>
-      </ChartTooltipFrame>
-    );
-  };
-}
-
 /**
- * Contribuição por serviço: top-5 + "Outros", fixed hue slots, a total
- * overlaid on the donut hole, and a legend (name + %) that carries identity
- * through a swatch — never through colored text.
+ * Contribuição por serviço: top-5 + "Outros", fixed hue slots, legend with
+ * a swatch per row. Interaction (decisão pós-F1, no Recharts Tooltip):
+ * hovering a slice highlights its legend row and vice-versa — the
+ * non-focused slices/rows dim, and the donut hole swaps from the period
+ * total to the focused service's name + BRL + share.
  */
 export function ServiceDonut({ serviceSales }: { serviceSales: ServiceSaleRow[] }) {
   const slices = buildDonutData(serviceSales);
   const totalCents = slices.reduce((sum, slice) => sum + slice.totalCents, 0);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hovered = slices.find((slice) => slice.id === hoveredId) ?? null;
+  const hoveredPct =
+    hovered && totalCents > 0 ? Math.round((hovered.totalCents / totalCents) * 100) : 0;
 
   if (slices.length === 0) {
     return <p className="py-10 text-center text-sm text-muted-foreground">Sem vendas no período.</p>;
@@ -138,17 +102,39 @@ export function ServiceDonut({ serviceSales }: { serviceSales: ServiceSaleRow[] 
               label={makeSliceLabel(slices)}
               labelLine={false}
               isAnimationActive={false}
+              onMouseEnter={(_, index) => setHoveredId(slices[index]?.id ?? null)}
+              onMouseLeave={() => setHoveredId(null)}
             >
               {slices.map((slice, index) => (
-                <Cell key={slice.id} fill={fillFor(slice, index)} />
+                <Cell
+                  key={slice.id}
+                  fill={fillFor(slice, index)}
+                  fillOpacity={hoveredId !== null && hoveredId !== slice.id ? 0.35 : 1}
+                  style={{ transition: "fill-opacity 150ms ease" }}
+                />
               ))}
             </Pie>
-            <Tooltip content={makeDonutTooltip(totalCents)} />
           </PieChart>
         </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-sans text-2xl font-semibold tabular-nums text-foreground">{formatBRL(totalCents)}</span>
-          <span className="text-xs text-muted-foreground">vendido</span>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
+          {hovered ? (
+            <>
+              <span className="w-full truncate text-xs text-muted-foreground" title={hovered.name}>
+                {hovered.name}
+              </span>
+              <span className="font-sans text-lg font-semibold tabular-nums text-foreground">
+                {formatBRL(hovered.totalCents)}
+              </span>
+              <span className="text-xs text-muted-foreground">{hoveredPct}% do período</span>
+            </>
+          ) : (
+            <>
+              <span className="font-sans text-lg font-semibold tabular-nums text-foreground">
+                {formatBRL(totalCents)}
+              </span>
+              <span className="text-xs text-muted-foreground">vendido</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -156,16 +142,25 @@ export function ServiceDonut({ serviceSales }: { serviceSales: ServiceSaleRow[] 
           once it shares the row with the fixed 260px donut (rather than the
           shrink-to-fit default that let a long service name push past the
           card's edge) — the actual ellipsis then happens per-item below. */}
-      <ul className="flex min-w-0 flex-wrap justify-center gap-x-4 gap-y-2 md:flex-1 md:flex-col md:items-start md:justify-center">
+      <ul className="flex min-w-0 flex-wrap justify-center gap-x-4 gap-y-1 md:flex-1 md:flex-col md:items-stretch md:justify-center">
         {slices.map((slice, index) => {
           const pct = totalCents > 0 ? Math.round((slice.totalCents / totalCents) * 100) : 0;
           return (
-            <li key={slice.id} className="flex w-full min-w-0 items-center gap-2 text-sm">
+            <li
+              key={slice.id}
+              onMouseEnter={() => setHoveredId(slice.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              className={cn(
+                "-mx-2 flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-sm transition-[background-color,opacity] duration-150",
+                hoveredId === slice.id && "bg-muted",
+                hoveredId !== null && hoveredId !== slice.id && "opacity-50",
+              )}
+            >
               <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: fillFor(slice, index) }} />
               <span className="min-w-0 flex-1 truncate text-foreground" title={slice.name}>
                 {slice.name}
               </span>
-              <span className="shrink-0 text-muted-foreground">{pct}%</span>
+              <span className="shrink-0 tabular-nums text-muted-foreground">{pct}%</span>
             </li>
           );
         })}
