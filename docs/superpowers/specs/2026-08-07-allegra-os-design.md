@@ -172,7 +172,7 @@ O site institucional já é um tema shadcn/Tailwind — o sistema **herda os tok
 
 ```css
 --background: #fcfaf6;  --foreground: #25211d;
---primary: #c79a61;     --primary-foreground: #24180f;   /* dourado/bronze */
+--primary: #966d36;     --primary-foreground: #ffffff;   /* bronze profundo, AA 4.63:1 c/ branco (ajuste pós-F1; dourado claro segue em --accent/--ring/gráficos) */
 --secondary: #f7f0eb;   --muted: #f3ede9;  --muted-foreground: #6a615b;
 --accent: #ead8bd;      --accent-foreground: #3a281a;
 --destructive: #de3b3d; --border: #e3ddd8; --input: #e9e3df; --ring: #b88952;
