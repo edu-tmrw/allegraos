@@ -147,7 +147,7 @@ export function ServiceDonut({ serviceSales }: { serviceSales: ServiceSaleRow[] 
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-serif text-2xl text-foreground">{formatBRL(totalCents)}</span>
+          <span className="font-sans text-2xl font-semibold tabular-nums text-foreground">{formatBRL(totalCents)}</span>
           <span className="text-xs text-muted-foreground">vendido</span>
         </div>
       </div>

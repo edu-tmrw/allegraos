@@ -179,7 +179,7 @@ O site institucional já é um tema shadcn/Tailwind — o sistema **herda os tok
 --radius: .75rem;
 ```
 
-Tipografia: **Cormorant Garamond** (títulos, serifada), **Jost** (corpo, sans), Allura (script, uso decorativo pontual). Cartões brancos sobre off-white quente, dourado como cor de ação. Verde/vermelho de valores monetários calibrados para harmonizar com a paleta quente.
+Tipografia: **Cormorant Garamond** (títulos, serifada), **Jost** (corpo, sans), Allura (script, uso decorativo pontual). **Números nunca em serif** (ajuste pós-F1): todo valor numérico — dinheiro, totais, contagens, blocos de data — usa Jost `tabular-nums` (o componente `Money` impõe `font-sans` por padrão); a serif fica para palavras. Única exceção deliberada: a linha de data por extenso no herói do detalhe do evento ("12 de setembro de 2026"), que é prosa. Cartões brancos sobre off-white quente, dourado como cor de ação. Verde/vermelho de valores monetários calibrados para harmonizar com a paleta quente.
 
 ## 9. Erros e edge cases
 

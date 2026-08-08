@@ -19,7 +19,7 @@ export function StatCard({ label, children }: { label: string; children: ReactNo
             layout gets real room on tablet/laptop widths; `truncate` is only
             the last-resort safety net for whatever's still too tight (e.g. a
             7-figure value at the very smallest 2-col width). */}
-        <div className="truncate font-serif text-2xl sm:text-3xl">{children}</div>
+        <div className="truncate font-sans text-2xl font-semibold tabular-nums sm:text-3xl">{children}</div>
       </CardContent>
     </Card>
   );

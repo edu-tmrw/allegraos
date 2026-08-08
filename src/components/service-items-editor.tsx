@@ -397,7 +397,7 @@ export function ServiceItemsEditor({
         <div className="flex items-center justify-between border-t pt-2">
           <span className="font-medium text-foreground">Valor do contrato</span>
           <span data-testid="valor-do-contrato">
-            <Money cents={contractTotalCents} className="font-serif text-xl" />
+            <Money cents={contractTotalCents} className="text-xl" />
           </span>
         </div>
       </div>
