@@ -15,20 +15,29 @@ const maskFormatter = new Intl.NumberFormat("pt-BR", {
  * decimal part), so typing "1500" displays "15,00" and "150000" displays
  * "1.500,00". A value of 0 renders as an empty field so `placeholder` can
  * show through.
+ *
+ * `id` is optional passthrough (needed to pair with a `<Label htmlFor>` —
+ * Task 14's `ServiceItemsEditor` is the first real consumer) — flagged back
+ * in Task 2's review as a gap to close "quando T15/T16 precisar"; extending
+ * it incrementally here rather than adding `disabled`/`aria-*` speculatively
+ * before any caller actually needs them.
  */
 export function CurrencyInput({
   valueCents,
   onChangeCents,
   placeholder,
+  id,
 }: {
   valueCents: number;
   onChangeCents: (cents: number) => void;
   placeholder?: string;
+  id?: string;
 }) {
   const display = valueCents === 0 ? "" : maskFormatter.format(valueCents / 100);
 
   return (
     <Input
+      id={id}
       inputMode="numeric"
       placeholder={placeholder}
       value={display}
