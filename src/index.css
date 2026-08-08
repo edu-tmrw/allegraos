@@ -5,21 +5,24 @@
 @import "@fontsource/cormorant-garamond/700.css";
 
 :root {
+  /* Texto sem preto (ajuste pós-F1): espresso #4a3826 como tinta principal
+     (11:1 no branco) e cobre-taupe #75604a no secundário (6:1) — a paleta
+     de leitura inteira fica em tons de marrom/cobre, nunca preto. */
   --background: #fcfaf6;
-  --foreground: #25211d;
+  --foreground: #4a3826;
   --card: #ffffff;
-  --card-foreground: #25211d;
+  --card-foreground: #4a3826;
   --popover: #ffffff;
-  --popover-foreground: #25211d;
+  --popover-foreground: #4a3826;
   /* Bronze profundo (não o dourado médio do site): o mais claro que passa
      WCAG AA (4.63:1) com texto branco em botões primários. O dourado claro
      da marca segue vivo em --accent, --ring e nos gráficos. */
   --primary: #966d36;
   --primary-foreground: #ffffff;
   --secondary: #f7f0eb;
-  --secondary-foreground: #25211d;
+  --secondary-foreground: #4a3826;
   --muted: #f3ede9;
-  --muted-foreground: #6a615b;
+  --muted-foreground: #75604a;
   --accent: #ead8bd;
   --accent-foreground: #3a281a;
   --destructive: #de3b3d;
