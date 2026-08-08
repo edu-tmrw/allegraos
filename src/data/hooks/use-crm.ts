@@ -88,7 +88,10 @@ function useAllContacts() {
  * soonest-due first. `undefined` while either source query is loading. An
  * activity whose `contactId` doesn't resolve (shouldn't happen — seed and
  * `useAddActivity` both guarantee it) is silently skipped rather than
- * crashing on a missing join.
+ * crashing on a missing join. A resolved contact that's archived is skipped
+ * too — an archived lead is off the board entirely, so its follow-ups
+ * shouldn't resurface in the banner just because nobody marked them done
+ * before archiving.
  */
 export function useDueFollowups(): { activity: Activity; contact: Contact }[] | undefined {
   const activitiesQuery = useAllActivities();
@@ -106,7 +109,7 @@ export function useDueFollowups(): { activity: Activity; contact: Contact }[] | 
     for (const activity of activities) {
       if (activity.done || activity.dueDate === null || activity.dueDate > today) continue;
       const contact = contactById.get(activity.contactId);
-      if (!contact) continue;
+      if (!contact || contact.archived) continue;
       due.push({ activity, contact, dueDate: activity.dueDate });
     }
 
@@ -150,6 +153,9 @@ export function useCreateContact() {
         createdBy: user?.profile.userId ?? FALLBACK_PROFILE_ID,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
+    // `NewLeadDialog` already toasts its own error — see `src/main.tsx`'s
+    // global `MutationCache` for what this flag means.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -159,6 +165,8 @@ export function useUpdateContact() {
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Contact> }) => crud("contacts").update(id, patch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
+    // `lead-panel.tsx`'s `onSubmit` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -178,6 +186,8 @@ export function useArchiveContact() {
   return useMutation({
     mutationFn: async (id: string) => crud("contacts").update(id, { archived: true }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
+    // `lead-panel.tsx`'s `handleArchive` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -187,6 +197,8 @@ export function useUnarchiveContact() {
   return useMutation({
     mutationFn: async (id: string) => crud("contacts").update(id, { archived: false }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
+    // `lead-panel.tsx`'s `handleUnarchive` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -206,6 +218,8 @@ export function useAddActivity() {
         createdBy: user?.profile.userId ?? FALLBACK_PROFILE_ID,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.activities }),
+    // Both call sites (`handleAddNote`, `handleAddFollowup` in `lead-panel.tsx`) already toast their own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -215,6 +229,8 @@ export function useToggleActivityDone() {
   return useMutation({
     mutationFn: async ({ id, done }: { id: string; done: boolean }) => crud("activities").update(id, { done }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.activities }),
+    // `lead-panel.tsx`'s `handleToggleDone` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -255,6 +271,8 @@ export function useCreateProposal() {
       queryClient.invalidateQueries({ queryKey: queryKeys.proposals });
       queryClient.invalidateQueries({ queryKey: queryKeys.proposalServices });
     },
+    // `NewProposalDialog` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -265,6 +283,8 @@ export function useSetProposalStatus() {
     mutationFn: async ({ id, status }: { id: string; status: Proposal["status"] }) =>
       crud("proposals").update(id, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.proposals }),
+    // `lead-proposals.tsx`'s `handleSetStatus` already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -288,6 +308,8 @@ export function useConvertLead() {
       queryClient.invalidateQueries({ queryKey: queryKeys.contacts });
       queryClient.invalidateQueries({ queryKey: queryKeys.proposals });
     },
+    // `ConvertLeadDialog` already forwards this error's own message via toast.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }

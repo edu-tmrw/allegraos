@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, test } from "vitest";
 import { AuthProvider } from "@/data/auth";
-import { resetDB, saveDB } from "@/data/store";
+import { crud, resetDB, saveDB } from "@/data/store";
 import type { MockDB } from "@/data/seed";
 import { todayISO } from "@/lib/format";
 import type { EventService, Evento } from "@/domain/types";
@@ -160,5 +160,27 @@ describe("useDueFollowups", () => {
     expect(overdue?.contact.id).toBe("contact-marcos");
     // act-beatriz-1 is due 5 days from now — must not show up as "due".
     expect(followups.some((f) => f.activity.id === "act-beatriz-1")).toBe(false);
+  });
+
+  test("skips a due/overdue activity whose contact is archived", async () => {
+    resetDB();
+    // contact-lucas is seeded already archived. Give them an overdue
+    // follow-up via the store oracle — same technique the seed's own
+    // act-marcos-1/act-juliana-1 fixtures stand in for elsewhere in this
+    // suite — one that would otherwise show up as due.
+    crud("activities").create({
+      contactId: "contact-lucas",
+      content: "Follow-up de um lead já arquivado — não deve aparecer no banner.",
+      dueDate: todayISO(),
+      done: false,
+      createdBy: "profile-bia",
+    });
+
+    const { result } = renderHook(() => useDueFollowups(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current).not.toBeUndefined());
+    const followups = result.current!;
+
+    expect(followups.some((f) => f.contact.id === "contact-lucas")).toBe(false);
   });
 });

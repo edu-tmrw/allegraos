@@ -66,6 +66,9 @@ export function useCreateTransaction() {
         createdBy: user?.profile.userId ?? FALLBACK_PROFILE_ID,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
+    // `TransactionFormDialog`'s create branch already toasts its own error —
+    // see `src/main.tsx`'s global `MutationCache` for what this flag means.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -76,6 +79,8 @@ export function useUpdateTransaction() {
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Transaction> }) =>
       crud("transactions").update(id, patch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
+    // `TransactionFormDialog`'s edit branch already toasts its own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
@@ -85,6 +90,8 @@ export function useRemoveTransaction() {
   return useMutation({
     mutationFn: async (id: string) => crud("transactions").remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
+    // Both call sites (`detalhe-lancamentos.tsx`, `financeiro/index.tsx`) already toast their own error.
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }

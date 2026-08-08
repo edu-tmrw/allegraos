@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, test } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
@@ -7,12 +8,22 @@ import { routes } from "@/router";
 
 const SESSION_KEY = "allegra-session";
 
+/**
+ * Mirrors `main.tsx`'s provider nesting: every routed page can assume a
+ * `QueryClient` is present (as of Task 18's CRM, `/crm` genuinely reads
+ * through `@tanstack/react-query` hooks, not just static placeholder JSX).
+ */
 function renderAt(initialPath: string) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
   return render(
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryClientProvider>,
   );
 }
 

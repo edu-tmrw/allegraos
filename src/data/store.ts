@@ -276,7 +276,7 @@ export function convertLead(input: {
   }
 
   saveDB(db);
-  return event;
+  return structuredClone(event);
 }
 
 // ---- canInactivateStage ---------------------------------------------------
