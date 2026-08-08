@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Wordmark } from "@/components/layout/app-shell";
 import { defaultRouteFor, useAuth } from "@/data/auth";
 import { crud, resetDB } from "@/data/store";
 import { cn } from "@/lib/utils";
+import { usePageTitle } from "@/lib/use-page-title";
 import type { Profile, Role } from "@/domain/types";
 
 interface ActiveProfile {
@@ -37,7 +39,13 @@ function listActiveProfiles(): ActiveProfile[] {
 export function LoginPage() {
   const { user, loginAs } = useAuth();
   const navigate = useNavigate();
-  const activeProfiles = useMemo(listActiveProfiles, []);
+  const queryClient = useQueryClient();
+  // Bumped on "Restaurar" so `activeProfiles` re-reads the store — profiles
+  // are the one piece of this page's own content that reset could change.
+  const [restoredAt, setRestoredAt] = useState(0);
+  const activeProfiles = useMemo(listActiveProfiles, [restoredAt]);
+  // No title passed — the bare "AllegraOS" is the spec'd title for login.
+  usePageTitle();
 
   if (user) return <Navigate to={defaultRouteFor(user.role)} replace />;
 
@@ -48,6 +56,14 @@ export function LoginPage() {
 
   function handleRestoreDemo() {
     resetDB();
+    // `resetDB` rewrites the store directly (localStorage + its own in-memory
+    // cache) — TanStack Query has no way to know anything changed, and with
+    // every query's `staleTime: Infinity` (see `keys.ts`) it would otherwise
+    // keep serving pre-reset data for the rest of the session, only picking
+    // up the reset after a hard reload. Clearing the cache here is what
+    // makes "restaurar" actually take effect for whatever page comes next.
+    queryClient.clear();
+    setRestoredAt(Date.now());
     toast.success("Dados de demonstração restaurados");
   }
 
