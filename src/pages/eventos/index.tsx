@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { usePerms } from "@/data/auth";
 import { useEvents } from "@/data/hooks/use-events";
@@ -89,25 +91,14 @@ function FilterField({
   );
 }
 
-function EmptyState({ title, action }: { title: string; action?: ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-4 py-16 text-center text-muted-foreground">
-        <p>{title}</p>
-        {action}
-      </CardContent>
-    </Card>
-  );
-}
 
 /** Loading placeholder for the very first paint (`events`/`eventTypes` both still `undefined`) — the page previously just showed the bare "Eventos" heading with nothing else while this settled. */
 function EventosSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl text-foreground">Eventos</h1>
+      <PageHeader title="Eventos">
         <Skeleton className="h-9 w-36" />
-      </div>
+      </PageHeader>
       <div className="flex flex-wrap items-end gap-3">
         <Skeleton className="h-9 w-full sm:w-64" />
         <Skeleton className="h-9 w-[150px]" />
@@ -169,13 +160,12 @@ export function EventosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl text-foreground">Eventos</h1>
+      <PageHeader title="Eventos">
         {/* Only while the list already has events — with zero events, the
             empty state below owns the one "Novo evento" CTA, so it's not
             duplicated on screen. */}
         {manageEvents && hasAnyEvents && novoEventoButton}
-      </div>
+      </PageHeader>
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex w-full flex-col gap-1.5 sm:w-64">

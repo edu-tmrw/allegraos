@@ -7,6 +7,7 @@ import {
   type PieLabelRenderProps,
   type TooltipContentProps,
 } from "recharts";
+import { ChartTooltipFrame } from "@/components/chart-tooltip";
 import { formatBRL } from "@/lib/format";
 
 export interface ServiceSaleRow {
@@ -96,12 +97,12 @@ function makeDonutTooltip(totalCents: number) {
     if (!slice) return null;
     const pct = totalCents > 0 ? Math.round((slice.totalCents / totalCents) * 100) : 0;
     return (
-      <div className="rounded-md border border-border bg-popover px-3 py-2 text-sm shadow-md">
+      <ChartTooltipFrame>
         <p className="font-medium text-foreground">{slice.name}</p>
         <p className="text-muted-foreground">
           <span className="font-medium tabular-nums text-foreground">{formatBRL(slice.totalCents)}</span> · {pct}%
         </p>
-      </div>
+      </ChartTooltipFrame>
     );
   };
 }

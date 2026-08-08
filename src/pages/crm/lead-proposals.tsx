@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/empty-state";
 import { Money } from "@/components/money";
 import { ServiceItemsEditor, type ServiceItemDraft, type ServiceItemRow } from "@/components/service-items-editor";
 import {
@@ -157,10 +158,7 @@ export function LeadProposals({
       )}
 
       {proposals.length === 0 ? (
-        <Card className="flex flex-col items-center gap-3 border-dashed p-4 text-center">
-          <p className="text-muted-foreground">Nenhuma proposta ainda.</p>
-          {novaPropostaButton}
-        </Card>
+        <EmptyState className="gap-3 p-4" title="Nenhuma proposta ainda." action={novaPropostaButton} />
       ) : (
         <div className="space-y-2">
           {proposals.map((proposal) => (

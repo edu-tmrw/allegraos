@@ -34,6 +34,8 @@ import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, Sele
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Money } from "@/components/money";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
 import { TransactionFormDialog } from "@/components/transaction-form-dialog";
 import { useEvents } from "@/data/hooks/use-events";
 import { useCategories } from "@/data/hooks/use-settings";
@@ -76,16 +78,6 @@ function FilterField({
   );
 }
 
-function EmptyState({ title, action }: { title: string; action?: ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-4 py-16 text-center text-muted-foreground">
-        <p>{title}</p>
-        {action}
-      </CardContent>
-    </Card>
-  );
-}
 
 function TotalStat({ label, testId, children }: { label: string; testId: string; children: ReactNode }) {
   return (
@@ -100,10 +92,9 @@ function TotalStat({ label, testId, children }: { label: string; testId: string;
 function FinanceiroSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl text-foreground">Financeiro</h1>
+      <PageHeader title="Financeiro">
         <Skeleton className="h-9 w-40" />
-      </div>
+      </PageHeader>
       <div className="flex flex-wrap gap-3">
         {Array.from({ length: 4 }, (_, index) => (
           <Skeleton key={index} className="h-14 w-40" />
@@ -268,10 +259,7 @@ export function FinanceiroPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl text-foreground">Financeiro</h1>
-        {novoLancamentoButton}
-      </div>
+      <PageHeader title="Financeiro">{novoLancamentoButton}</PageHeader>
 
       <div className="flex flex-wrap items-end gap-3">
         <FilterField id="financeiro-mes" label="Mês" value={month} onValueChange={setMonthOverride}>

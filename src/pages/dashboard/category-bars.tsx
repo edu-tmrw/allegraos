@@ -1,4 +1,5 @@
 import { Bar, BarChart, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
+import { ChartTooltipFrame } from "@/components/chart-tooltip";
 import { formatBRL } from "@/lib/format";
 
 export interface CategoryExpenseRow {
@@ -34,10 +35,10 @@ function CategoryTooltip({ active, payload }: TooltipContentProps) {
   const row = payload[0]?.payload as CategoryExpenseRow | undefined;
   if (!row) return null;
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-sm shadow-md">
+    <ChartTooltipFrame>
       <p className="font-medium text-foreground">{row.name}</p>
       <p className="font-medium tabular-nums text-foreground">{formatBRL(row.totalCents)}</p>
-    </div>
+    </ChartTooltipFrame>
   );
 }
 
