@@ -97,7 +97,7 @@ describe("AuthProvider / useAuth", () => {
 
     await user.click(screen.getByRole("button", { name: "login" }));
 
-    expect(screen.getByTestId("user")).toHaveTextContent("Ana Amaral|Admin");
+    expect(screen.getByTestId("user")).toHaveTextContent("Gabi Lauria|Admin");
     expect(localStorage.getItem(SESSION_KEY)).toBe("profile-ana");
   });
 
@@ -143,7 +143,7 @@ describe("AuthProvider / useAuth", () => {
         <AuthConsumer />
       </AuthProvider>,
     );
-    expect(screen.getByTestId("user")).toHaveTextContent("Ana Amaral|Admin");
+    expect(screen.getByTestId("user")).toHaveTextContent("Gabi Lauria|Admin");
 
     await user.click(screen.getByRole("button", { name: "logout" }));
 

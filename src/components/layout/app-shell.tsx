@@ -23,19 +23,22 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   show: (role: Role) => boolean;
+  /** Desktop sidebar grouping: work pages on top, admin pages pinned to the bottom. Mobile ignores this (flat order below). */
+  section: "top" | "bottom";
 }
 
 /**
- * Sidebar order, verbatim from spec. The mobile bottom bar reuses every item
- * except Configurações (which always lives in the "Mais" sheet — see below).
+ * Flat order feeds the mobile bottom bar (every item except Configurações,
+ * which always lives in the "Mais" sheet — see below); `section` splits the
+ * desktop sidebar into the day-to-day group and the admin group.
  */
 const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: (role) => role.manageFinance },
-  { to: "/eventos", label: "Eventos", icon: CalendarHeart, show: () => true },
-  { to: "/financeiro", label: "Financeiro", icon: Wallet, show: (role) => role.manageFinance },
-  { to: "/crm", label: "CRM", icon: HeartHandshake, show: (role) => role.manageCrm },
-  { to: "/equipe", label: "Equipe", icon: Users, show: (role) => role.manageTeam },
-  { to: "/configuracoes", label: "Configurações", icon: Settings, show: (role) => role.manageSettings },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: (role) => role.manageFinance, section: "top" },
+  { to: "/eventos", label: "Eventos", icon: CalendarHeart, show: () => true, section: "top" },
+  { to: "/financeiro", label: "Financeiro", icon: Wallet, show: (role) => role.manageFinance, section: "top" },
+  { to: "/crm", label: "CRM", icon: HeartHandshake, show: (role) => role.manageCrm, section: "top" },
+  { to: "/equipe", label: "Equipe", icon: Users, show: (role) => role.manageTeam, section: "bottom" },
+  { to: "/configuracoes", label: "Configurações", icon: Settings, show: (role) => role.manageSettings, section: "bottom" },
 ];
 
 /** The bottom nav bar shows at most this many route items before overflowing into "Mais". */
@@ -91,26 +94,50 @@ export function AppShell() {
         </div>
 
         <nav className="flex-1 space-y-1 px-3">
-          {visibleItems.map((item) => (
-            <NavLink key={item.to} to={item.to} className={sidebarLinkClass}>
-              <item.icon className="size-4" />
-              {item.label}
-            </NavLink>
-          ))}
+          {visibleItems
+            .filter((item) => item.section === "top")
+            .map((item) => (
+              <NavLink key={item.to} to={item.to} className={sidebarLinkClass}>
+                <item.icon className="size-4" />
+                {item.label}
+              </NavLink>
+            ))}
         </nav>
 
-        <div className="border-t border-border p-4">
-          <p className="truncate text-sm font-medium text-foreground">{user.profile.name}</p>
-          <p className="text-xs text-muted-foreground">{user.role.name}</p>
+        <nav className="space-y-1 px-3 pb-3">
+          {visibleItems
+            .filter((item) => item.section === "bottom")
+            .map((item) => (
+              <NavLink key={item.to} to={item.to} className={sidebarLinkClass}>
+                <item.icon className="size-4" />
+                {item.label}
+              </NavLink>
+            ))}
+        </nav>
+
+        <div className="flex items-center gap-3 border-t border-border p-4">
+          <div
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-medium text-accent-foreground"
+          >
+            {user.profile.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">{user.profile.name}</p>
+            <span className="inline-flex w-fit items-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
+              {user.role.name}
+            </span>
+          </div>
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="mt-3 w-full justify-start gap-2 text-muted-foreground"
+            size="icon"
+            aria-label="Sair"
+            title="Sair"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
             onClick={handleLogout}
           >
             <LogOut className="size-4" />
-            Sair
           </Button>
         </div>
       </aside>

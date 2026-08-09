@@ -49,7 +49,7 @@ export const MUTATION_DEFAULTS = { retry: false } as const;
 
 /**
  * `createdBy` for mutations that stamp the acting user: `useAuth()`'s
- * current profile, falling back to Ana's seeded admin profile. Every real
+ * current profile, falling back to Gabi's seeded admin profile. Every real
  * route in the app is already permission-gated, so `user` should never
  * actually be `null` here — this only guards a mutation hook called before
  * the session finishes resolving.
