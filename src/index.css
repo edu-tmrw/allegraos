@@ -34,6 +34,10 @@
   --positive: #3f7d54;
   --negative: #c13438;
   --chart-1: #bd8626;
+  /* Par monocromático do gráfico de linha (decisão pós-F1): lucro em dourado
+     claro. Falha o gate categórico do validador (ΔE 11.7 < 15) de propósito —
+     a identidade das 2 séries vem dos labels diretos + legenda, nunca só da cor. */
+  --chart-1-soft: #d9ae63;
   --chart-2: #3e8540;
   --chart-3: #4f7ec2;
   --chart-4: #c05c4e;
@@ -64,6 +68,7 @@
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-chart-1: var(--chart-1);
+  --color-chart-1-soft: var(--chart-1-soft);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
