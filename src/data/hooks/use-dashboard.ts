@@ -42,17 +42,22 @@ export interface DashboardData {
 }
 
 /**
- * `'year'`/`'12m'` are open-ended windows (no `to`): a near-future-dated
- * event or transaction still belongs to "this year"/"the last 12 months"
- * even if it hasn't happened yet. `'all'` means no filtering at all.
+ * Closed windows on both ends (fix pós-F1 — a janela aberta deixava um
+ * evento de 2027 contar em "Este ano"):
+ * - 'year': 1º de janeiro a 31 de dezembro do ano corrente — eventos
+ *   futuros DESTE ano contam como vendidos no ano; de outros anos, não.
+ * - '12m': de hoje−12 meses até hoje, inclusivo — "últimos 12 meses"
+ *   literal, sem datas futuras.
+ * - 'all': sem filtro.
  */
 export function periodToRange(period: DashboardPeriod): { from?: string; to?: string } | undefined {
   if (period === "all") return undefined;
+  const today = todayISO();
   if (period === "year") {
-    const year = todayISO().slice(0, 4);
-    return { from: `${year}-01-01` };
+    const year = today.slice(0, 4);
+    return { from: `${year}-01-01`, to: `${year}-12-31` };
   }
-  return { from: format(subMonths(parseISO(todayISO()), 12), "yyyy-MM-dd") };
+  return { from: format(subMonths(parseISO(today), 12), "yyyy-MM-dd"), to: today };
 }
 
 /**

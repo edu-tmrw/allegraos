@@ -10,7 +10,7 @@
 
 ---
 
-## 1. Login como Ana (admin)
+## 1. Login como Gabi (admin)
 
 - [ ] Abrir a tela de login e entrar como **Gabi Lauria** (botão "Entrar como").
 - Observar: a cliente reconhece o nome/papel? A frase de abertura ("Onde cada detalhe fala de amor") soa como a marca da Allegra?
@@ -103,6 +103,29 @@ Feedback: ______________________________________________________________________
 Feedback: _______________________________________________________________________
 
 ---
+
+## Decisões de semântica a colher na sessão
+
+Duas perguntas que precisam de resposta explícita da cliente — a F2 grava essas regras no banco (views e RLS), então é mais barato decidir agora.
+
+### A. "Contribuição por serviço" significa o quê?
+
+Mostrar o donut e perguntar: *"quando você quer saber 'quanto vendi de cerimonial', o que conta?"*
+
+- [ ] **(a) O que FECHOU no período** — pela data em que cada serviço foi adicionado ao contrato (venda comercial). _Sem campo novo: já registramos a data de fechamento de cada item._
+- [ ] **(b) Serviços dos eventos QUE ACONTECEM no período** — pela data do evento (regra atual do sistema).
+- [ ] **(c) O que foi RECEBIDO de contratos com aquele serviço** — pelo dinheiro em caixa.
+
+Decisão: ____________________________________________________________________
+
+### B. A comercial pode ver os valores dos eventos vendidos?
+
+A Bia **precisa** ver os preços do catálogo para montar propostas (isso não muda). A dúvida é o contrato fechado: hoje, ao abrir um evento, ela vê os serviços contratados **com preço, desconto e valor total** (não vê recebido/custo/lucro).
+
+- [ ] **(a) Pode ver** os valores contratados dos eventos (como está hoje).
+- [ ] **(b) Vê só a lista de serviços, sem valores** — preços de evento viram permissão financeira.
+
+Decisão: ______________________________ _(a regra escolhida vira RLS na F2)_
 
 ## Notas gerais da sessão
 
