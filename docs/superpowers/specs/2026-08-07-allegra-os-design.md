@@ -174,6 +174,12 @@ O site institucional já é um tema shadcn/Tailwind — o sistema **herda os tok
 --background: #fcfaf6;  --foreground: #4a3826;  /* espresso — sem preto no sistema (ajuste pós-F1), 11:1 no branco */
 --primary: #966d36;     --primary-foreground: #ffffff;   /* bronze profundo, AA 4.63:1 c/ branco (ajuste pós-F1; dourado claro segue em --accent/--ring/gráficos) */
 --secondary: #f7f0eb;   --muted: #f3ede9;  --muted-foreground: #75604a;  /* cobre-taupe, 6:1 */
+
+/* Gráficos monocromáticos (ajuste pós-F1): linha = --chart-1 #bd8626 (faturamento)
+   + --chart-1-soft #dec293 (lucro; ouro a 50% sobre branco); donut = rampa ordinal
+   --chart-gold-1..5 (#5d400b → #d4a755, rank maior = mais escuro; validada em modo
+   --ordinal) + "Outros" em --chart-other #8a8178. Identidade nunca só por cor:
+   labels diretos, legenda e tooltip sempre presentes. */
 --accent: #ead8bd;      --accent-foreground: #3a281a;
 --destructive: #de3b3d; --border: #e3ddd8; --input: #e9e3df; --ring: #b88952;
 --radius: .75rem;

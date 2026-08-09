@@ -37,8 +37,19 @@ export function buildDonutData(serviceSales: ServiceSaleRow[]): DonutSlice[] {
   return [...top, { id: OTHER_ID, name: OTHER_NAME, totalCents: othersTotal }];
 }
 
-/** Fixed slot order, assigned once by descending rank — never re-cycled. */
-const SLICE_FILLS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+/**
+ * Monochrome ordinal ramp (decisão pós-F1): rank 1 = biggest slice = deepest
+ * bronze, lightening down the rank — fixed by rank, never re-cycled. The
+ * ramp is validated (`--ordinal`: monotone lightness, visible step gaps,
+ * light end ≥2:1 vs surface); "Outros" stays the neutral gray.
+ */
+const SLICE_FILLS = [
+  "var(--chart-gold-1)",
+  "var(--chart-gold-2)",
+  "var(--chart-gold-3)",
+  "var(--chart-gold-4)",
+  "var(--chart-gold-5)",
+];
 const OTHER_FILL = "var(--chart-other)";
 
 function fillFor(slice: DonutSlice, index: number): string {
