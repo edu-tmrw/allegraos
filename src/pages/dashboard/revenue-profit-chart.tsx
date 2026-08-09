@@ -90,9 +90,10 @@ function FlowTooltip({ active, payload, label }: TooltipContentProps) {
 
 /**
  * Faturamento × Lucro over the last 12 months. One shared y-axis (never a
- * dual axis) — both series are BRL, so they read on the same scale. Colors
- * come only from `--chart-1`/`--chart-2`; identity also lives in the top
- * legend and the direct end-labels, never in text color.
+ * dual axis) — both series are BRL, so they read on the same scale.
+ * Monochrome pair (decisão pós-F1): faturamento in the brand gold, lucro in
+ * its lighter step (`--chart-1-soft`) — identity lives in the top legend and
+ * the direct end-labels, never in color alone (nor in text color).
  */
 export function RevenueProfitChart({ data }: { data: FlowPoint[] }) {
   return (
@@ -137,7 +138,7 @@ export function RevenueProfitChart({ data }: { data: FlowPoint[] }) {
           type="monotone"
           dataKey="profitCents"
           name="Lucro"
-          stroke="var(--chart-2)"
+          stroke="var(--chart-1-soft)"
           strokeWidth={2}
           dot={false}
           activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--background)" }}
