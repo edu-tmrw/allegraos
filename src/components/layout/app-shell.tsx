@@ -10,7 +10,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { NavLink, Navigate, Outlet, useNavigate, type NavLinkRenderProps } from "react-router";
+import { NavLink, Navigate, Outlet, ScrollRestoration, useNavigate, type NavLinkRenderProps } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -87,6 +87,10 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen">
+      {/* Navegar para outra página rola pro topo; voltar (POP) restaura a
+          posição anterior — comportamento nativo que SPAs perdem por padrão. */}
+      <ScrollRestoration />
+
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-card md:flex">
         <div className="px-6 pt-8 pb-6">
