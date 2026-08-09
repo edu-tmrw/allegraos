@@ -34,10 +34,21 @@
   --positive: #3f7d54;
   --negative: #c13438;
   --chart-1: #bd8626;
-  /* Par monocromático do gráfico de linha (decisão pós-F1): lucro em dourado
-     claro. Falha o gate categórico do validador (ΔE 11.7 < 15) de propósito —
-     a identidade das 2 séries vem dos labels diretos + legenda, nunca só da cor. */
-  --chart-1-soft: #d9ae63;
+  /* Par monocromático do gráfico de linha (decisão pós-F1): lucro no
+     equivalente sólido de --chart-1 com 50% de opacidade sobre o card branco
+     (mistura exata: #bd8626 ⊕ #fff = #dec293) — desaturado de propósito, lê
+     marrom-claro e não amarelo. Sólido (não strokeOpacity) para legenda e
+     tooltip mostrarem o tom real. Identidade das 2 séries vem dos labels
+     diretos + legenda, nunca só da cor. */
+  --chart-1-soft: #dec293;
+  /* Rampa ordinal monocromática do donut (decisão pós-F1, validada no modo
+     --ordinal do script de dataviz): rank 1 = maior fatia = bronze mais
+     profundo, clareando com o rank. "Outros" permanece em --chart-other. */
+  --chart-gold-1: #5d400b;
+  --chart-gold-2: #7d5814;
+  --chart-gold-3: #9e701d;
+  --chart-gold-4: #bd8626;
+  --chart-gold-5: #d4a755;
   --chart-2: #3e8540;
   --chart-3: #4f7ec2;
   --chart-4: #c05c4e;
