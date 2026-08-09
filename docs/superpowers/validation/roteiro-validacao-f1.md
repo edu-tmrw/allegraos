@@ -12,7 +12,7 @@
 
 ## 1. Login como Ana (admin)
 
-- [ ] Abrir a tela de login e entrar como **Ana Amaral** (botão "Entrar como").
+- [ ] Abrir a tela de login e entrar como **Gabi Lauria** (botão "Entrar como").
 - Observar: a cliente reconhece o nome/papel? A frase de abertura ("Onde cada detalhe fala de amor") soa como a marca da Allegra?
 
 Feedback: _______________________________________________________________________

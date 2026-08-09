@@ -33,18 +33,18 @@ function renderTab() {
 beforeEach(() => {
   localStorage.clear();
   resetDB();
-  // Logs in as Ana (seeded Admin) before every test, the way a real session would resolve on mount.
+  // Logs in as Gabi (seeded Admin) before every test, the way a real session would resolve on mount.
   localStorage.setItem(SESSION_KEY, "profile-ana");
 });
 
 describe("UsuariasTab", () => {
-  test("lists Ana and Bia with their role names; creating Carla with papel Comercial adds a profile row", async () => {
+  test("lists Gabi and Bia with their role names; creating Carla with papel Comercial adds a profile row", async () => {
     const user = userEvent.setup();
     renderTab();
 
-    await screen.findByText("Ana Amaral");
+    await screen.findByText("Gabi Lauria");
     expect(screen.getByText("Bia Costa")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Papel de Ana Amaral" })).toHaveTextContent("Admin");
+    expect(screen.getByRole("combobox", { name: "Papel de Gabi Lauria" })).toHaveTextContent("Admin");
     expect(screen.getByRole("combobox", { name: "Papel de Bia Costa" })).toHaveTextContent("Comercial");
 
     await user.click(screen.getByRole("button", { name: "Adicionar usuária" }));
@@ -65,11 +65,11 @@ describe("UsuariasTab", () => {
     expect(created?.active).toBe(true);
   });
 
-  test("self-guard: Ana toggling her own active switch off is refused (toast, stays active)", async () => {
+  test("self-guard: Gabi toggling her own active switch off is refused (toast, stays active)", async () => {
     const user = userEvent.setup();
     renderTab();
 
-    const anaSwitch = await screen.findByRole("switch", { name: "Inativar Ana Amaral" });
+    const anaSwitch = await screen.findByRole("switch", { name: "Inativar Gabi Lauria" });
     expect(anaSwitch).toHaveAttribute("aria-checked", "true");
 
     await user.click(anaSwitch);

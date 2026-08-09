@@ -34,7 +34,7 @@ Vercel, estático (SPA rewrite em `vercel.json`) — deploy automático a cada p
 
 Não há autenticação real ainda (chega na F2, via Supabase). Na tela de login, "Entrar como" alterna entre as duas usuárias seedadas:
 
-- **Ana Amaral** — papel admin, vê tudo (dashboard, financeiro, eventos, CRM, equipe, configurações).
+- **Gabi Lauria** — papel admin, vê tudo (dashboard, financeiro, eventos, CRM, equipe, configurações).
 - **Bia Costa** — papel comercial, só CRM e eventos (sem financeiro).
 
 O botão **"Restaurar dados de demonstração"** (rodapé do login) reseta o store em memória para o seed original — útil depois de explorar/quebrar alguma coisa numa sessão de validação.

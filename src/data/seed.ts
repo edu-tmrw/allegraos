@@ -95,7 +95,7 @@ export function buildSeed(todayISO: string): MockDB {
   ];
 
   const profiles: Profile[] = [
-    { userId: "profile-ana", name: "Ana Amaral", roleId: "role-admin", active: true },
+    { userId: "profile-ana", name: "Gabi Lauria", roleId: "role-admin", active: true },
     { userId: "profile-bia", name: "Bia Costa", roleId: "role-comercial", active: true },
   ];
 

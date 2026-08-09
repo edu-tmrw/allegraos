@@ -212,7 +212,7 @@ describe("crud", () => {
   });
 
   test("get() on profiles looks up by userId", () => {
-    expect(crud("profiles").get("profile-ana")?.name).toBe("Ana Amaral");
+    expect(crud("profiles").get("profile-ana")?.name).toBe("Gabi Lauria");
   });
 
   test("get() returns a deep copy — mutating the returned object leaves the store and localStorage untouched", () => {
