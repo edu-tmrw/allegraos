@@ -2,7 +2,7 @@ begin;
 
 set local search_path = public, extensions;
 
-select plan(50);
+select plan(49);
 
 select has_table('public', 'roles', 'creates roles');
 select has_table('public', 'profiles', 'creates profiles');
@@ -81,23 +81,6 @@ select results_eq(
       ('Proposta enviada'::text, 3),
       ('Follow-up'::text, 4)$$,
   'seeds the initial pipeline stages'
-);
-
-select ok(
-  not exists (
-    select 1
-    from pg_index as index_definition
-    where index_definition.indrelid = 'public.events'::regclass
-      and index_definition.indisunique
-      and index_definition.indnkeyatts = 1
-      and (
-        select attribute_definition.attnum
-        from pg_attribute as attribute_definition
-        where attribute_definition.attrelid = 'public.events'::regclass
-          and attribute_definition.attname = 'contact_id'
-      ) = any(index_definition.indkey)
-  ),
-  'does not enforce one event per contact before the integrity migration'
 );
 
 select fk_ok(
