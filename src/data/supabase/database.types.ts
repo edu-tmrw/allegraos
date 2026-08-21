@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activities: {
@@ -687,7 +712,7 @@ export type Database = {
           p_contact_id: string
           p_event_date: string
           p_event_name: string
-          p_event_time: string
+          p_event_time?: string
           p_proposal_id: string
         }
         Returns: string
@@ -696,8 +721,8 @@ export type Database = {
         Args: {
           p_contact_id: string
           p_discount_cents: number
-          p_items: Json
-          p_notes: string
+          p_items?: Json
+          p_notes?: string
           p_sent_date: string
         }
         Returns: string
@@ -834,6 +859,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       proposal_status: ["sent", "accepted", "rejected"],

@@ -32,6 +32,7 @@ export const queryKeys = {
   proposals: key("proposals"),
   proposalServices: key("proposalServices"),
   teamMembers: key("teamMembers"),
+  dashboard: key("dashboard"),
 };
 
 /**

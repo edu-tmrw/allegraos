@@ -1,23 +1,31 @@
-/**
- * CRM data hooks: the contact/lead pipeline, activities/follow-ups,
- * proposals, and converting an accepted proposal into a real event.
- */
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/data/auth";
-import { convertLead, crud } from "@/data/store";
+import { MUTATION_DEFAULTS, QUERY_DEFAULTS, queryKeys } from "@/data/hooks/keys";
+import { supabase } from "@/data/supabase/client";
+import { unwrap, unwrapNullable } from "@/data/supabase/result";
+import {
+  toActivity,
+  toActivityInsert,
+  toActivityUpdate,
+  toContact,
+  toContactInsert,
+  toContactUpdate,
+  toEvento,
+  toProposal,
+  toProposalService,
+  toProposalUpdate,
+} from "@/data/supabase/rows";
+import type { Activity, Contact, Evento, Proposal } from "@/domain/types";
 import { todayISO } from "@/lib/format";
-import type { Activity, Contact, Proposal } from "@/domain/types";
-import { FALLBACK_PROFILE_ID, MUTATION_DEFAULTS, QUERY_DEFAULTS, queryKeys } from "@/data/hooks/keys";
 
-// ---- Contacts -----------------------------------------------------------
-
-/** Non-archived contacts by default; pass `{archived: true}` for the archive view. */
 export function useContacts(opts?: { archived?: boolean }) {
   const archived = opts?.archived ?? false;
   return useQuery({
     queryKey: [...queryKeys.contacts, { archived }],
-    queryFn: () => crud("contacts").list().filter((contact) => contact.archived === archived),
+    queryFn: async () => {
+      const result = await supabase.from("contacts").select("*").eq("archived", archived).order("created_at", { ascending: false });
+      return unwrap(result).map(toContact);
+    },
     ...QUERY_DEFAULTS,
   });
 }
@@ -25,109 +33,85 @@ export function useContacts(opts?: { archived?: boolean }) {
 export function useContact(id: string) {
   return useQuery({
     queryKey: [...queryKeys.contacts, id],
-    queryFn: () => crud("contacts").get(id),
+    queryFn: async () => {
+      const row = unwrapNullable(await supabase.from("contacts").select("*").eq("id", id).maybeSingle());
+      return row ? toContact(row) : undefined;
+    },
     ...QUERY_DEFAULTS,
   });
 }
 
-/** The `Evento` this contact converted into (`contactId === id`), or `null` — powers the GANHO badge. */
 export function useContactEvent(contactId: string) {
   return useQuery({
     queryKey: [...queryKeys.events, "byContact", contactId],
-    queryFn: () => crud("events").list().find((event) => event.contactId === contactId) ?? null,
+    queryFn: async () => {
+      const row = unwrapNullable(await supabase.from("events").select("*").eq("contact_id", contactId).maybeSingle());
+      return row ? toEvento(row) : null;
+    },
     ...QUERY_DEFAULTS,
   });
-}
-
-// ---- Activities -----------------------------------------------------------
-
-function compareCreatedAtDesc(a: Activity, b: Activity): number {
-  if (a.createdAt === b.createdAt) return 0;
-  return a.createdAt < b.createdAt ? 1 : -1;
 }
 
 export function useContactActivities(contactId: string) {
   return useQuery({
     queryKey: [...queryKeys.activities, contactId],
-    queryFn: () =>
-      crud("activities")
-        .list()
-        .filter((activity) => activity.contactId === contactId)
-        .sort(compareCreatedAtDesc),
+    queryFn: async () => {
+      const result = await supabase.from("activities").select("*").eq("contact_id", contactId).order("created_at", { ascending: false });
+      return unwrap(result).map(toActivity);
+    },
     ...QUERY_DEFAULTS,
   });
 }
 
-/**
- * Private base queries `useDueFollowups` selects from — there's no
- * exported "all activities"/"all contacts" hook in the contract (the
- * public hooks are always scoped: per-contact, or archived/non-archived),
- * so this reuses the resources' own registered `queryKeys` rather than
- * invent a new key. Any activity/contact mutation invalidates these two
- * keys directly (see `use-crm.ts`'s mutations below), so due-followups
- * refreshes for free.
- */
-function useAllActivities() {
+function useDueActivities() {
+  const today = todayISO();
   return useQuery({
-    queryKey: queryKeys.activities,
-    queryFn: () => crud("activities").list(),
+    queryKey: [...queryKeys.activities, "due", today],
+    queryFn: async () => {
+      const result = await supabase
+        .from("activities")
+        .select("*")
+        .eq("done", false)
+        .not("due_date", "is", null)
+        .lte("due_date", today)
+        .order("due_date", { ascending: true });
+      return unwrap(result).map(toActivity);
+    },
     ...QUERY_DEFAULTS,
   });
 }
 
-function useAllContacts() {
+function useActiveContacts() {
   return useQuery({
-    queryKey: queryKeys.contacts,
-    queryFn: () => crud("contacts").list(),
+    queryKey: [...queryKeys.contacts, { archived: false }],
+    queryFn: async () => {
+      const result = await supabase.from("contacts").select("*").eq("archived", false);
+      return unwrap(result).map(toContact);
+    },
     ...QUERY_DEFAULTS,
   });
 }
 
-/**
- * Every not-done activity due today or earlier, joined with its contact,
- * soonest-due first. `undefined` while either source query is loading. An
- * activity whose `contactId` doesn't resolve (shouldn't happen — seed and
- * `useAddActivity` both guarantee it) is silently skipped rather than
- * crashing on a missing join. A resolved contact that's archived is skipped
- * too — an archived lead is off the board entirely, so its follow-ups
- * shouldn't resurface in the banner just because nobody marked them done
- * before archiving.
- */
 export function useDueFollowups(): { activity: Activity; contact: Contact }[] | undefined {
-  const activitiesQuery = useAllActivities();
-  const contactsQuery = useAllContacts();
-
+  const activitiesQuery = useDueActivities();
+  const contactsQuery = useActiveContacts();
   return useMemo(() => {
-    const activities = activitiesQuery.data;
-    const contacts = contactsQuery.data;
-    if (!activities || !contacts) return undefined;
-
-    const today = todayISO();
-    const contactById = new Map(contacts.map((contact) => [contact.id, contact]));
-
-    const due: { activity: Activity; contact: Contact; dueDate: string }[] = [];
-    for (const activity of activities) {
-      if (activity.done || activity.dueDate === null || activity.dueDate > today) continue;
-      const contact = contactById.get(activity.contactId);
-      if (!contact || contact.archived) continue;
-      due.push({ activity, contact, dueDate: activity.dueDate });
-    }
-
-    due.sort((a, b) => (a.dueDate === b.dueDate ? 0 : a.dueDate < b.dueDate ? -1 : 1));
-    return due.map(({ activity, contact }) => ({ activity, contact }));
+    if (!activitiesQuery.data || !contactsQuery.data) return undefined;
+    const contacts = new Map(contactsQuery.data.map((contact) => [contact.id, contact]));
+    return activitiesQuery.data.flatMap((activity) => {
+      const contact = contacts.get(activity.contactId);
+      return contact ? [{ activity, contact }] : [];
+    });
   }, [activitiesQuery.data, contactsQuery.data]);
 }
-
-// ---- Proposals ------------------------------------------------------------
 
 export function useContactProposals(contactId: string) {
   return useQuery({
     queryKey: [...queryKeys.proposals, contactId],
-    queryFn: () =>
-      crud("proposals")
-        .list()
-        .filter((proposal) => proposal.contactId === contactId)
-        .sort((a, b) => (a.sentDate === b.sentDate ? 0 : a.sentDate < b.sentDate ? 1 : -1)),
+    queryFn: async () => {
+      const result = await supabase.from("proposals").select("*").eq("contact_id", contactId).order("sent_date", { ascending: false });
+      return unwrap(result).map(toProposal);
+    },
     ...QUERY_DEFAULTS,
   });
 }
@@ -135,26 +119,22 @@ export function useContactProposals(contactId: string) {
 export function useProposalServices(proposalId: string) {
   return useQuery({
     queryKey: [...queryKeys.proposalServices, proposalId],
-    queryFn: () => crud("proposalServices").list().filter((item) => item.proposalId === proposalId),
+    queryFn: async () => {
+      const result = await supabase.from("proposal_services").select("*").eq("proposal_id", proposalId);
+      return unwrap(result).map(toProposalService);
+    },
     ...QUERY_DEFAULTS,
   });
 }
 
-// ---- Contact mutations ----------------------------------------------------
-
 export function useCreateContact() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: Omit<Contact, "id" | "archived" | "createdBy" | "createdAt">) =>
-      crud("contacts").create({
-        ...input,
-        archived: false,
-        createdBy: user?.profile.userId ?? FALLBACK_PROFILE_ID,
-      }),
+    mutationFn: async (input: Omit<Contact, "id" | "archived" | "createdBy" | "createdAt">) => {
+      const payload = toContactInsert({ ...input, archived: false });
+      return toContact(unwrap(await supabase.from("contacts").insert(payload).select("*").single()));
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
-    // `NewLeadDialog` already toasts its own error — see `src/main.tsx`'s
-    // global `MutationCache` for what this flag means.
     meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
@@ -163,9 +143,9 @@ export function useCreateContact() {
 export function useUpdateContact() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Contact> }) => crud("contacts").update(id, patch),
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Contact> }) =>
+      toContact(unwrap(await supabase.from("contacts").update(toContactUpdate(patch)).eq("id", id).select("*").single())),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
-    // `lead-panel.tsx`'s `onSubmit` already toasts its own error.
     meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
@@ -175,50 +155,39 @@ export function useMoveContactStage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ contactId, stageId }: { contactId: string; stageId: string }) =>
-      crud("contacts").update(contactId, { stageId }),
+      toContact(unwrap(await supabase.from("contacts").update(toContactUpdate({ stageId })).eq("id", contactId).select("*").single())),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
+    ...MUTATION_DEFAULTS,
+  });
+}
+
+function useArchivedMutation(archived: boolean) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      toContact(unwrap(await supabase.from("contacts").update(toContactUpdate({ archived })).eq("id", id).select("*").single())),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
+    meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
 
 export function useArchiveContact() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => crud("contacts").update(id, { archived: true }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
-    // `lead-panel.tsx`'s `handleArchive` already toasts its own error.
-    meta: { toastHandled: true },
-    ...MUTATION_DEFAULTS,
-  });
+  return useArchivedMutation(true);
 }
 
 export function useUnarchiveContact() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => crud("contacts").update(id, { archived: false }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.contacts }),
-    // `lead-panel.tsx`'s `handleUnarchive` already toasts its own error.
-    meta: { toastHandled: true },
-    ...MUTATION_DEFAULTS,
-  });
+  return useArchivedMutation(false);
 }
-
-// ---- Activity mutations ---------------------------------------------------
 
 export function useAddActivity() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: { contactId: string; content: string; dueDate: string | null }) =>
-      crud("activities").create({
-        contactId: input.contactId,
-        content: input.content,
-        dueDate: input.dueDate,
-        done: input.dueDate ? false : true,
-        createdBy: user?.profile.userId ?? FALLBACK_PROFILE_ID,
-      }),
+    mutationFn: async (input: { contactId: string; content: string; dueDate: string | null }) => {
+      const payload = toActivityInsert({ ...input, done: input.dueDate === null });
+      return toActivity(unwrap(await supabase.from("activities").insert(payload).select("*").single()));
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.activities }),
-    // Both call sites (`handleAddNote`, `handleAddFollowup` in `lead-panel.tsx`) already toast their own error.
     meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
@@ -227,15 +196,13 @@ export function useAddActivity() {
 export function useToggleActivityDone() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, done }: { id: string; done: boolean }) => crud("activities").update(id, { done }),
+    mutationFn: async ({ id, done }: { id: string; done: boolean }) =>
+      toActivity(unwrap(await supabase.from("activities").update(toActivityUpdate({ done })).eq("id", id).select("*").single())),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.activities }),
-    // `lead-panel.tsx`'s `handleToggleDone` already toasts its own error.
     meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
-
-// ---- Proposal mutations ---------------------------------------------------
 
 export interface CreateProposalInput {
   contactId: string;
@@ -245,33 +212,27 @@ export interface CreateProposalInput {
   items: { serviceId: string; variantId: string | null; priceCents: number }[];
 }
 
-/** Creates the proposal (status starts `"sent"` — a `Proposal` row only exists once it's been sent) plus one `proposalService` row per item. */
 export function useCreateProposal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateProposalInput) => {
-      const proposal = crud("proposals").create({
-        contactId: input.contactId,
-        sentDate: input.sentDate,
-        status: "sent",
-        discountCents: input.discountCents,
-        notes: input.notes,
-      });
-      const services = input.items.map((item) =>
-        crud("proposalServices").create({
-          proposalId: proposal.id,
-          serviceId: item.serviceId,
-          variantId: item.variantId,
-          priceCents: item.priceCents,
-        }),
-      );
-      return { proposal, services };
+      const proposalId = unwrap(await supabase.rpc("create_proposal_with_items", {
+        p_contact_id: input.contactId,
+        p_sent_date: input.sentDate,
+        p_discount_cents: input.discountCents,
+        p_items: input.items.map((item) => ({ service_id: item.serviceId, variant_id: item.variantId, price_cents: item.priceCents })),
+        ...(input.notes === null ? {} : { p_notes: input.notes }),
+      }));
+      const [proposalResult, servicesResult] = await Promise.all([
+        supabase.from("proposals").select("*").eq("id", proposalId).single(),
+        supabase.from("proposal_services").select("*").eq("proposal_id", proposalId),
+      ]);
+      return { proposal: toProposal(unwrap(proposalResult)), services: unwrap(servicesResult).map(toProposalService) };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.proposals });
       queryClient.invalidateQueries({ queryKey: queryKeys.proposalServices });
     },
-    // `NewProposalDialog` already toasts its own error.
     meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
@@ -281,34 +242,41 @@ export function useSetProposalStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Proposal["status"] }) =>
-      crud("proposals").update(id, { status }),
+      toProposal(unwrap(await supabase.from("proposals").update(toProposalUpdate({ status })).eq("id", id).select("*").single())),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.proposals }),
-    // `lead-proposals.tsx`'s `handleSetStatus` already toasts its own error.
     meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });
 }
 
-/**
- * Wraps `store.convertLead` (the store's one multi-table operation): the
- * new event copies the proposal's items, so both `events` and
- * `eventServices` need a refresh, alongside the `contacts`/`proposals` the
- * conversion itself touches. Any rejection (wrong contact, proposal not
- * accepted, contact already converted) is the store's own `Error`, thrown
- * from inside this `async` `mutationFn` — left uncaught here on purpose so
- * it surfaces verbatim (pt-BR message included) as `mutation.error`.
- */
+export interface ConvertLeadInput {
+  contactId: string;
+  proposalId: string;
+  eventName: string;
+  eventTypeId: string;
+  eventDate: string;
+  eventTime: string | null;
+}
+
 export function useConvertLead() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Parameters<typeof convertLead>[0]) => convertLead(input),
+    mutationFn: async (input: ConvertLeadInput): Promise<Evento> => {
+      const eventId = unwrap(await supabase.rpc("convert_lead", {
+        p_contact_id: input.contactId,
+        p_proposal_id: input.proposalId,
+        p_event_name: input.eventName,
+        p_event_date: input.eventDate,
+        ...(input.eventTime === null ? {} : { p_event_time: input.eventTime }),
+      }));
+      return toEvento(unwrap(await supabase.from("events").select("*").eq("id", eventId).single()));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.events });
       queryClient.invalidateQueries({ queryKey: queryKeys.eventServices });
       queryClient.invalidateQueries({ queryKey: queryKeys.contacts });
       queryClient.invalidateQueries({ queryKey: queryKeys.proposals });
     },
-    // `ConvertLeadDialog` already forwards this error's own message via toast.
     meta: { toastHandled: true },
     ...MUTATION_DEFAULTS,
   });

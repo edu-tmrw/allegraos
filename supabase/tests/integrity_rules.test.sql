@@ -2,7 +2,7 @@ begin;
 
 set local search_path = public, extensions;
 
-select plan(33);
+select plan(35);
 
 select set_config('request.jwt.claim.sub', '99999999-9999-9999-9999-999999999999', true);
 select throws_ok(
@@ -53,6 +53,16 @@ select has_function('public', 'set_created_by', array[]::text[], 'creates the au
 select has_function(
   'public', 'void_transaction', array['uuid'],
   'creates the audited transaction-voiding RPC'
+);
+select is(
+  (select pronargdefaults from pg_proc where oid = to_regprocedure('public.create_proposal_with_items(uuid,date,integer,text,jsonb)')),
+  2::smallint,
+  'proposal RPC makes nullable notes and its trailing items argument omittable'
+);
+select is(
+  (select pronargdefaults from pg_proc where oid = to_regprocedure('public.convert_lead(uuid,uuid,text,date,time)')),
+  1::smallint,
+  'lead conversion RPC makes nullable event time omittable'
 );
 
 select ok(
