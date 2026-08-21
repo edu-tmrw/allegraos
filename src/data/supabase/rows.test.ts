@@ -92,12 +92,29 @@ test("maps a database event into the UI domain without changing dates, times, ce
   });
 });
 
+test("normalizes a PostgreSQL event time to the domain minute precision", () => {
+  expect(
+    toEvento({
+      id: "event-time",
+      name: "Evento noturno",
+      event_type_id: "type-1",
+      event_date: "2026-10-10",
+      event_time: "19:30:00",
+      contact_id: null,
+      discount_cents: 0,
+      canceled: false,
+      notes: null,
+      created_at: "2026-08-21T13:45:12.345678+00:00",
+    }),
+  ).toMatchObject({ eventTime: "19:30" });
+});
+
 test("builds exact event insert and sparse update payloads", () => {
   const event: Omit<Evento, "id" | "createdAt"> = {
     name: "Evento",
     eventTypeId: "type-1",
     eventDate: "2026-11-01",
-    eventTime: "19:30:00",
+    eventTime: "19:30",
     contactId: null,
     discountCents: 0,
     canceled: false,
@@ -108,7 +125,7 @@ test("builds exact event insert and sparse update payloads", () => {
     name: "Evento",
     event_type_id: "type-1",
     event_date: "2026-11-01",
-    event_time: "19:30:00",
+    event_time: "19:30",
     contact_id: null,
     discount_cents: 0,
     canceled: false,

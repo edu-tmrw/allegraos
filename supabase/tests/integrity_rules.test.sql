@@ -2,7 +2,7 @@ begin;
 
 set local search_path = public, extensions;
 
-select plan(32);
+select plan(33);
 
 select set_config('request.jwt.claim.sub', '99999999-9999-9999-9999-999999999999', true);
 select throws_ok(
@@ -22,6 +22,17 @@ select throws_ok(
 );
 
 select has_index('public', 'events', 'events_one_contact_idx', 'indexes one event per contact');
+select throws_ok(
+  $$
+    insert into public.events (name, event_type_id, event_date, event_time)
+    select 'Invalid second precision', id, current_date, time '19:30:45'
+    from public.event_types
+    where name = 'Casamento'
+  $$,
+  '23514',
+  null,
+  'event times reject non-zero seconds'
+);
 select has_column('public', 'transactions', 'deleted_at', 'transactions record when they were voided');
 select has_column('public', 'transactions', 'deleted_by', 'transactions record who voided them');
 select fk_ok(

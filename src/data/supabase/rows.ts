@@ -162,13 +162,17 @@ export function toPipelineStageUpdate(patch: Partial<PipelineStage>): TablesUpda
   return payload;
 }
 
+function toMinutePrecision(value: string | null): string | null {
+  return value === null ? null : value.slice(0, 5);
+}
+
 export function toEvento(row: Tables<"events">): Evento {
   return {
     id: row.id,
     name: row.name,
     eventTypeId: row.event_type_id,
     eventDate: row.event_date,
-    eventTime: row.event_time,
+    eventTime: toMinutePrecision(row.event_time),
     contactId: row.contact_id,
     discountCents: row.discount_cents,
     canceled: row.canceled,
