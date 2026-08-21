@@ -6,6 +6,9 @@
 
 Não inclua neste documento emails reais, UUIDs, tokens, senhas ou chaves.
 
+Para conduzir e registrar a validação com a cliente, use o
+[roteiro de homologação](./roteiro-homologacao-cliente.md).
+
 ## Gate local
 
 - [x] `supabase db reset --local` aplicou todas as migrations sem drift local.
