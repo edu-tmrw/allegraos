@@ -29,30 +29,70 @@ grant execute on function public.has_perm(text) to authenticated;
 revoke all on all tables in schema public from anon, authenticated;
 grant usage on schema public to authenticated;
 
-grant select, insert, update, delete on public.roles to authenticated;
-grant select, insert, delete on public.profiles to authenticated;
+grant select, delete on public.roles to authenticated;
+grant insert (name, manage_finance, manage_events, manage_crm, manage_team, manage_settings)
+  on public.roles to authenticated;
+grant update (name, manage_finance, manage_events, manage_crm, manage_team, manage_settings)
+  on public.roles to authenticated;
+grant select, delete on public.profiles to authenticated;
+grant insert (user_id, name, role_id, active) on public.profiles to authenticated;
 grant update (name, role_id, active) on public.profiles to authenticated;
 
-grant select, insert, update, delete on public.event_types to authenticated;
-grant select, insert, update, delete on public.services to authenticated;
-grant select, insert, update, delete on public.service_variants to authenticated;
-grant select, insert, update, delete on public.transaction_categories to authenticated;
-grant select, insert, update, delete on public.pipeline_stages to authenticated;
+grant select, delete on public.event_types to authenticated;
+grant insert (name, active) on public.event_types to authenticated;
+grant update (name, active) on public.event_types to authenticated;
+grant select, delete on public.services to authenticated;
+grant insert (name, default_price_cents, active) on public.services to authenticated;
+grant update (name, default_price_cents, active) on public.services to authenticated;
+grant select, delete on public.service_variants to authenticated;
+grant insert (service_id, name, default_price_cents, active)
+  on public.service_variants to authenticated;
+grant update (service_id, name, default_price_cents, active)
+  on public.service_variants to authenticated;
+grant select, delete on public.transaction_categories to authenticated;
+grant insert (name, kind, active) on public.transaction_categories to authenticated;
+grant update (name, kind, active) on public.transaction_categories to authenticated;
+grant select, delete on public.pipeline_stages to authenticated;
+grant insert (name, position, active) on public.pipeline_stages to authenticated;
+grant update (name, position, active) on public.pipeline_stages to authenticated;
 
-grant select, insert, update, delete on public.team_members to authenticated;
+grant select, delete on public.team_members to authenticated;
+grant insert (name, phone, role_label, pay_notes, active) on public.team_members to authenticated;
+grant update (name, phone, role_label, pay_notes, active) on public.team_members to authenticated;
 
-grant select, insert, delete on public.contacts to authenticated;
+grant select, delete on public.contacts to authenticated;
+grant insert (name, phone, email, event_type_id, stage_id, archived, notes)
+  on public.contacts to authenticated;
 grant update (name, phone, email, event_type_id, stage_id, archived, notes)
   on public.contacts to authenticated;
-grant select, insert, update, delete on public.proposals to authenticated;
-grant select, insert, update, delete on public.proposal_services to authenticated;
-grant select, insert, delete on public.activities to authenticated;
+grant select, delete on public.proposals to authenticated;
+grant insert (contact_id, sent_date, status, discount_cents, notes)
+  on public.proposals to authenticated;
+grant update (contact_id, sent_date, status, discount_cents, notes)
+  on public.proposals to authenticated;
+grant select, delete on public.proposal_services to authenticated;
+grant insert (proposal_id, service_id, variant_id, price_cents)
+  on public.proposal_services to authenticated;
+grant update (proposal_id, service_id, variant_id, price_cents)
+  on public.proposal_services to authenticated;
+grant select, delete on public.activities to authenticated;
+grant insert (contact_id, content, due_date, done) on public.activities to authenticated;
 grant update (contact_id, content, due_date, done) on public.activities to authenticated;
 
-grant select, insert, update, delete on public.events to authenticated;
-grant select, insert, update, delete on public.event_services to authenticated;
+grant select, delete on public.events to authenticated;
+grant insert (name, event_type_id, event_date, event_time, contact_id, discount_cents, canceled, notes)
+  on public.events to authenticated;
+grant update (name, event_type_id, event_date, event_time, contact_id, discount_cents, canceled, notes)
+  on public.events to authenticated;
+grant select, delete on public.event_services to authenticated;
+grant insert (event_id, service_id, variant_id, price_cents)
+  on public.event_services to authenticated;
+grant update (event_id, service_id, variant_id, price_cents)
+  on public.event_services to authenticated;
 
-grant select, insert on public.transactions to authenticated;
+grant select on public.transactions to authenticated;
+grant insert (kind, amount_cents, date, category_id, event_id, description)
+  on public.transactions to authenticated;
 grant update (kind, amount_cents, date, category_id, event_id, description)
   on public.transactions to authenticated;
 
@@ -149,8 +189,14 @@ using ((select public.has_perm('manage_events')));
 
 create policy "finance can manage transactions"
 on public.transactions for all to authenticated
-using ((select public.has_perm('manage_finance')))
-with check ((select public.has_perm('manage_finance')));
+using (
+  (select public.has_perm('manage_finance'))
+  and deleted_at is null
+)
+with check (
+  (select public.has_perm('manage_finance'))
+  and deleted_at is null
+);
 
 create policy "crm can manage contacts"
 on public.contacts for all to authenticated
@@ -264,6 +310,7 @@ begin
       using errcode = '42501';
   end if;
   if p_sent_date is null or p_discount_cents is null or p_discount_cents < 0
+     or p_items is null
      or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
     raise exception 'Proposal data and at least one item are required.'
       using errcode = '22023';
@@ -316,6 +363,7 @@ declare
   proposal_state public.proposal_status;
   proposal_discount_cents integer;
   event_id uuid;
+  copied_item_count integer;
 begin
   if not public.has_perm('manage_crm') then
     raise exception 'CRM permission is required to convert a lead.'
@@ -340,9 +388,6 @@ begin
   if proposal_state <> 'accepted' then
     raise exception 'The proposal must be accepted.' using errcode = '22023';
   end if;
-  if not exists (select 1 from public.proposal_services where proposal_id = p_proposal_id) then
-    raise exception 'The accepted proposal must contain at least one item.' using errcode = '22023';
-  end if;
   if exists (select 1 from public.events where contact_id = p_contact_id) then
     raise exception 'The contact is already linked to an event.' using errcode = '23505';
   end if;
@@ -357,6 +402,11 @@ begin
   insert into public.event_services (event_id, service_id, variant_id, price_cents)
   select event_id, ps.service_id, ps.variant_id, ps.price_cents
   from public.proposal_services as ps where ps.proposal_id = p_proposal_id;
+
+  get diagnostics copied_item_count = row_count;
+  if copied_item_count = 0 then
+    raise exception 'The accepted proposal must contain at least one item.' using errcode = '22023';
+  end if;
 
   return event_id;
 end;

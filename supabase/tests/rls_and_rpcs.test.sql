@@ -2,7 +2,7 @@ begin;
 
 set local search_path = public, extensions;
 
-select plan(77);
+select plan(82);
 
 -- The authorization surface is part of the public database contract.
 select has_function(
@@ -224,6 +224,11 @@ select ok(
   has_column_privilege('authenticated', 'public.activities', 'done', 'update')
     and not has_column_privilege('authenticated', 'public.activities', 'created_by', 'update'),
   'activity updates protect created_by'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.event_services', 'created_at', 'insert')
+    and not has_column_privilege('authenticated', 'public.event_services', 'created_at', 'update'),
+  'the service close timestamp is database-owned and immutable'
 );
 
 -- Real auth users and profiles drive auth.uid(), RLS, and every guarded RPC.
@@ -647,6 +652,23 @@ select is_empty(
   $$select id from public.proposals where notes = 'Must roll back completely'$$,
   'a rejected proposal RPC leaves no partial header'
 );
+select throws_ok(
+  $$
+    select public.create_proposal_with_items(
+      '61000000-0000-0000-0000-000000000002',
+      date '2026-08-18',
+      0,
+      'Null items must fail',
+      null
+    )
+  $$,
+  '22023', null,
+  'the proposal RPC rejects SQL NULL items'
+);
+select is_empty(
+  $$select id from public.proposals where notes = 'Null items must fail'$$,
+  'NULL items cannot leave a partial proposal header'
+);
 reset role;
 
 select set_config('request.jwt.claim.sub', '44444444-4444-4444-4444-444444444444', true);
@@ -679,6 +701,10 @@ select throws_ok(
   $$,
   '22023', null,
   'convert_lead rejects an accepted proposal without items'
+);
+select is_empty(
+  $$select id from public.events where name = 'Incomplete proposal'$$,
+  'an itemless conversion leaves no partial event'
 );
 select throws_ok(
   $$
@@ -843,6 +869,17 @@ select ok(
   ),
   'void_transaction records when and who performed the anulation'
 );
+set local role authenticated;
+select is_empty(
+  $$
+    update public.transactions
+    set amount_cents = 999999
+    where id = '66000000-0000-0000-0000-000000000001'
+    returning id
+  $$,
+  'a voided transaction cannot be rewritten'
+);
+reset role;
 
 select throws_ok(
   $$
