@@ -28,7 +28,7 @@ Não inclua neste documento emails reais, UUIDs, tokens, senhas ou chaves.
 
 ## Bootstrap e autenticação
 
-- [ ] A primeira administradora foi criada no Auth e associada ao papel `Admin` por uma proprietária do banco.
+- [x] A primeira administradora foi criada no Auth e associada ao papel `Admin` por uma proprietária do banco.
 - [ ] A administradora entra com email e senha e chega à rota autorizada.
 - [ ] Recuperação de senha envia o email sem revelar se uma conta existe.
 - [ ] Logout encerra a sessão e rotas privadas redirecionam para `/login`.
@@ -65,4 +65,4 @@ Preencher após a execução, sem dados pessoais:
 - **Admin smoke:** pendente
 - **Comercial smoke:** pendente
 - **Findings dos advisors:** seis avisos intencionais para RPCs `SECURITY DEFINER` autenticados; findings de performance limitados a índices ainda sem uso.
-- **Observações:** migrations e Edge Function publicadas pelo MCP Supabase em 2026-08-21. Smoke sem JWT retornou HTTP 401. O projeto Vercel não está vinculado a este workspace/conector, e o bootstrap/smoke com pessoas reais aguarda as identidades de Admin e Comercial.
+- **Observações:** migrations e Edge Function publicadas pelo MCP Supabase em 2026-08-21. Smoke sem JWT retornou HTTP 401. O primeiro perfil Admin foi provisionado sem registrar dados pessoais neste documento. O projeto Vercel não está vinculado a este workspace/conector; os smokes autenticados ainda aguardam credenciais de acesso e uma identidade Comercial.
