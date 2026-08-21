@@ -2,7 +2,7 @@ begin;
 
 set local search_path = public, extensions;
 
-select plan(82);
+select plan(95);
 
 -- The authorization surface is part of the public database contract.
 select has_function(
@@ -22,6 +22,10 @@ select has_function(
 select has_function(
   'public', 'reorder_stages', array['uuid[]'],
   'creates the atomic stage reorder RPC'
+);
+select has_function(
+  'public', 'set_pipeline_stage_active', array['uuid', 'boolean'],
+  'creates the atomic stage activation RPC'
 );
 select has_function(
   'public', 'void_transaction', array['uuid'],
@@ -74,6 +78,15 @@ select ok(
     select procedure_definition.prosecdef
       and procedure_definition.proconfig = array['search_path=public, auth']::text[]
     from pg_proc as procedure_definition
+    where procedure_definition.oid = to_regprocedure('public.set_pipeline_stage_active(uuid,boolean)')
+  ),
+  'set_pipeline_stage_active is security definer with a fixed search path'
+);
+select ok(
+  (
+    select procedure_definition.prosecdef
+      and procedure_definition.proconfig = array['search_path=public, auth']::text[]
+    from pg_proc as procedure_definition
     where procedure_definition.oid = to_regprocedure('public.void_transaction(uuid)')
   ),
   'void_transaction is security definer with a fixed search path'
@@ -102,6 +115,10 @@ select ok(
 select ok(
   has_function_privilege('authenticated', 'public.reorder_stages(uuid[])', 'execute'),
   'authenticated can call the guarded reorder RPC'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.set_pipeline_stage_active(uuid,boolean)', 'execute'),
+  'authenticated can call the guarded stage activation RPC'
 );
 select ok(
   has_function_privilege('authenticated', 'public.void_transaction(uuid)', 'execute'),
@@ -139,6 +156,13 @@ select ok(
 );
 select ok(
   not coalesce(
+    has_function_privilege('public', to_regprocedure('public.set_pipeline_stage_active(uuid,boolean)'), 'execute'),
+    false
+  ),
+  'PUBLIC cannot execute set_pipeline_stage_active'
+);
+select ok(
+  not coalesce(
     has_function_privilege('public', to_regprocedure('public.void_transaction(uuid)'), 'execute'),
     false
   ),
@@ -172,6 +196,13 @@ select ok(
     false
   ),
   'anon cannot execute reorder_stages'
+);
+select ok(
+  not coalesce(
+    has_function_privilege('anon', to_regprocedure('public.set_pipeline_stage_active(uuid,boolean)'), 'execute'),
+    false
+  ),
+  'anon cannot execute set_pipeline_stage_active'
 );
 select ok(
   not coalesce(
@@ -224,6 +255,10 @@ select ok(
   has_column_privilege('authenticated', 'public.activities', 'done', 'update')
     and not has_column_privilege('authenticated', 'public.activities', 'created_by', 'update'),
   'activity updates protect created_by'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.pipeline_stages', 'active', 'update'),
+  'stage activation cannot bypass the serialized RPC through a direct update'
 );
 select ok(
   not has_column_privilege('authenticated', 'public.event_services', 'created_at', 'insert')
@@ -782,6 +817,82 @@ select results_eq(
   $$values (150000)$$,
   'convert_lead copies every proposal item into the event'
 );
+reset role;
+
+-- Stage activation is serialized with contact assignment. The pre-check in
+-- the UI is only advisory; these database rules are the authoritative guard.
+select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
+set local role authenticated;
+insert into public.pipeline_stages (name, position, active)
+values ('Atomic guard', 5, true);
+select lives_ok(
+  $$select public.set_pipeline_stage_active(
+      (select id from public.pipeline_stages where name = 'Atomic guard'), false
+    )$$,
+  'Admin can inactivate an empty stage atomically'
+);
+reset role;
+select is(
+  (select active from public.pipeline_stages where name = 'Atomic guard'),
+  false,
+  'the guarded activation RPC persists the requested state'
+);
+
+select set_config('request.jwt.claim.sub', '44444444-4444-4444-4444-444444444444', true);
+set local role authenticated;
+select throws_ok(
+  $$select public.set_pipeline_stage_active(
+      (select id from public.pipeline_stages where name = 'Atomic guard'), true
+    )$$,
+  '42501', null,
+  'a user without settings permission cannot activate a stage'
+);
+reset role;
+
+select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
+set local role authenticated;
+select lives_ok(
+  $$select public.set_pipeline_stage_active(
+      (select id from public.pipeline_stages where name = 'Atomic guard'), true
+    )$$,
+  'Admin can reactivate a stage through the guarded RPC'
+);
+insert into public.contacts (name, stage_id)
+values (
+  'Lead that blocks inactivation',
+  (select id from public.pipeline_stages where name = 'Atomic guard')
+);
+select throws_ok(
+  $$select public.set_pipeline_stage_active(
+      (select id from public.pipeline_stages where name = 'Atomic guard'), false
+    )$$,
+  '23514', null,
+  'a stage with a live contact cannot be inactivated'
+);
+select lives_ok(
+  $$
+    update public.contacts
+    set archived = true
+    where name = 'Lead that blocks inactivation';
+    select public.set_pipeline_stage_active(
+      (select id from public.pipeline_stages where name = 'Atomic guard'), false
+    )
+  $$,
+  'archived contacts do not prevent stage inactivation'
+);
+select throws_ok(
+  $$
+    insert into public.contacts (name, stage_id)
+    values (
+      'Cannot enter inactive stage',
+      (select id from public.pipeline_stages where name = 'Atomic guard')
+    )
+  $$,
+  '23514', null,
+  'a live contact cannot be assigned to an inactive stage'
+);
+delete from public.contacts where name = 'Lead that blocks inactivation';
+delete from public.pipeline_stages where name = 'Atomic guard';
 reset role;
 
 -- reorder_stages validates the complete set and survives unique-position swaps.

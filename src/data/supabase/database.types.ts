@@ -729,6 +729,22 @@ export type Database = {
       }
       has_perm: { Args: { p_permission: string }; Returns: boolean }
       reorder_stages: { Args: { p_ordered_ids: string[] }; Returns: undefined }
+      set_pipeline_stage_active: {
+        Args: { p_active: boolean; p_stage_id: string }
+        Returns: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          position: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pipeline_stages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       void_transaction: { Args: { p_transaction_id: string }; Returns: string }
     }
     Enums: {

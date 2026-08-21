@@ -101,10 +101,17 @@ export function EtapasTab() {
     }
   }
 
-  function handleToggleActive(stage: PipelineStage, active: boolean) {
-    if (!active && !canInactivate(stage.id)) {
-      toast.error("Mova os leads desta etapa antes de inativá-la");
-      return;
+  async function handleToggleActive(stage: PipelineStage, active: boolean) {
+    if (!active) {
+      try {
+        if (!(await canInactivate(stage.id))) {
+          toast.error("Mova os leads desta etapa antes de inativá-la");
+          return;
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Não foi possível verificar esta etapa.");
+        return;
+      }
     }
     updateMutation.mutate({ id: stage.id, patch: { active } });
   }
