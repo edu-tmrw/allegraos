@@ -2,7 +2,7 @@ begin;
 
 set local search_path = public, extensions;
 
-select plan(33);
+select plan(32);
 
 select set_config('request.jwt.claim.sub', '99999999-9999-9999-9999-999999999999', true);
 select throws_ok(
@@ -99,15 +99,12 @@ select ok(
   'anon cannot execute void_transaction'
 );
 select ok(
-  not coalesce(
-    has_function_privilege(
-      'authenticated',
-      to_regprocedure('public.void_transaction(uuid)'),
-      'execute'
-    ),
-    false
+  has_function_privilege(
+    'authenticated',
+    to_regprocedure('public.void_transaction(uuid)'),
+    'execute'
   ),
-  'void_transaction remains fail-closed until authorization policies land'
+  'authenticated can execute the internally guarded void_transaction RPC'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.transactions', 'delete'),
@@ -138,16 +135,6 @@ select is(
   15,
   'RLS is enabled on all 15 public tables'
 );
-select is(
-  (
-    select count(*)::integer
-    from pg_policies
-    where schemaname = 'public'
-  ),
-  0,
-  'no permissive policy opens the fail-closed rollout'
-);
-
 insert into auth.users (
   instance_id,
   id,
