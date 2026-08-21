@@ -2,13 +2,11 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@/data/auth";
 import { crud, resetDB } from "@/data/store";
 import type { Transaction } from "@/domain/types";
 import { formatBRL, formatDate } from "@/lib/format";
 import { FinanceiroPage } from "@/pages/financeiro";
 
-const SESSION_KEY = "allegra-session";
 
 /** See `service-items-editor.test.tsx` for why a plain-string `getByText(formatBRL(cents))` is unsafe (NBSP vs. Testing Library's DOM-side-only whitespace normalizer). */
 function normalizeSpace(text: string): string {
@@ -43,20 +41,16 @@ function sumByKind(txs: Transaction[]): { inCents: number; outCents: number } {
 /**
  * `FinanceiroPage` navigates nowhere (editing is a dialog, not a route) —
  * unlike `EventosPage`'s own render helper, no `MemoryRouter` is needed
- * here, only the query client + a real `AuthProvider` (the dialog's own
- * create/update mutations read `useAuth()` for `createdBy`).
+ * here, only the query client. Transaction ownership is database-assigned.
  */
 function renderFinanceiro() {
-  localStorage.setItem(SESSION_KEY, "profile-ana");
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <FinanceiroPage />
-      </AuthProvider>
+      <FinanceiroPage />
     </QueryClientProvider>,
   );
 }

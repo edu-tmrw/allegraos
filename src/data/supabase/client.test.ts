@@ -1,5 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 
+vi.unmock("@/data/supabase/client");
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.resetModules();

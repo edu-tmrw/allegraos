@@ -2,23 +2,19 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@/data/auth";
 import { crud, resetDB } from "@/data/store";
 import { TransactionFormDialog } from "@/components/transaction-form-dialog";
 import { todayISO } from "@/lib/format";
 
-const SESSION_KEY = "allegra-session";
 // Casamento Patrícia & João — active, non-canceled, already has 4 seeded
 // transactions of its own (see seed.ts) — a real event to lock the dialog to.
 const SEEDED_EVENT_ID = "event-casamento-proximo";
 
 /**
- * `TransactionFormDialog` calls `useCreateTransaction`/`useUpdateTransaction`,
- * both of which read `useAuth()` internally (for `createdBy`) — every render
- * needs a real `<AuthProvider>` above it, not just a `QueryClientProvider`.
+ * Transaction ownership is assigned by the database, so the dialog only
+ * needs a query client in this component-level test.
  */
 function renderDialog(props: Partial<React.ComponentProps<typeof TransactionFormDialog>> = {}) {
-  localStorage.setItem(SESSION_KEY, "profile-ana");
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -31,9 +27,7 @@ function renderDialog(props: Partial<React.ComponentProps<typeof TransactionForm
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TransactionFormDialog {...merged} />
-      </AuthProvider>
+      <TransactionFormDialog {...merged} />
     </QueryClientProvider>,
   );
 }

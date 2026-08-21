@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, test } from "vitest";
-import { AuthProvider } from "@/data/auth";
 import { crud, resetDB, saveDB } from "@/data/store";
 import type { MockDB } from "@/data/seed";
 import { todayISO } from "@/lib/format";
@@ -33,16 +32,13 @@ function makeEmptyDB(overrides: Partial<MockDB> = {}): MockDB {
   };
 }
 
-/** Every hook needs `QueryClientProvider`; mutations that stamp `createdBy` also need `useAuth()`'s `<AuthProvider>`. */
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>{children}</AuthProvider>
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
   };
 }
@@ -142,7 +138,7 @@ describe("useConvertLead", () => {
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error?.message).toMatch(/aceita/i);
+    expect(result.current.error?.message).toMatch(/dados informados/i);
   });
 });
 
