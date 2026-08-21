@@ -138,24 +138,22 @@ export function monthlyFlow(
 }
 
 /**
- * One row per sold item of each non-canceled event, carrying the event's
- * own date (not the item's `createdAt`) — the shape the dashboard donut
- * groups and filters by period.
+ * One row per sold item of each non-canceled event. The sale timestamp is
+ * the item's database-owned `createdAt`, which represents when the service
+ * was closed independently of the event or payment dates.
  */
 export function serviceSalesRows(
   events: Evento[],
   items: EventService[],
-): { serviceId: string; priceCents: number; eventDate: string }[] {
-  const activeEventDateById = new Map(
-    events.filter((ev) => !ev.canceled).map((ev) => [ev.id, ev.eventDate]),
-  );
+): { serviceId: string; priceCents: number; soldAt: string }[] {
+  const activeEventIds = new Set(events.filter((ev) => !ev.canceled).map((ev) => ev.id));
 
   return items
-    .filter((item) => activeEventDateById.has(item.eventId))
+    .filter((item) => activeEventIds.has(item.eventId))
     .map((item) => ({
       serviceId: item.serviceId,
       priceCents: item.priceCents,
-      eventDate: activeEventDateById.get(item.eventId)!,
+      soldAt: item.createdAt,
     }));
 }
 
@@ -171,9 +169,9 @@ function inPeriod(dateISO: string, period?: { from?: string; to?: string }): boo
 }
 
 /**
- * Groups sales rows by service within an optional period, filtering by
- * `eventDate`. Names come from `services`; services with no matching
- * sales are omitted. Sorted by total descending.
+ * Groups sales rows by service within an optional period, filtering by the
+ * calendar-date portion of `soldAt`. Names come from `services`; services
+ * with no matching sales are omitted. Sorted by total descending.
  */
 export function groupSalesByService(
   rows: ReturnType<typeof serviceSalesRows>,
@@ -182,7 +180,7 @@ export function groupSalesByService(
 ): { serviceId: string; name: string; totalCents: number }[] {
   const totals = new Map<string, number>();
   for (const row of rows) {
-    if (!inPeriod(row.eventDate, period)) continue;
+    if (!inPeriod(row.soldAt.slice(0, 10), period)) continue;
     totals.set(row.serviceId, (totals.get(row.serviceId) ?? 0) + row.priceCents);
   }
 

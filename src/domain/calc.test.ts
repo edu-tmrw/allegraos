@@ -264,17 +264,41 @@ describe("monthlyFlow", () => {
 });
 
 describe("serviceSalesRows", () => {
-  test("emits one row per item of a non-canceled event, using the event's date", () => {
+  test("emits one row per item of a non-canceled event, using each item's close timestamp", () => {
     const ev = makeEvento({ id: "ev-1", eventDate: "2026-03-15", canceled: false });
     const items = [
-      makeEventService({ eventId: "ev-1", serviceId: "svc-1", priceCents: 100_000 }),
-      makeEventService({ eventId: "ev-1", serviceId: "svc-2", priceCents: 50_000 }),
+      makeEventService({
+        eventId: "ev-1",
+        serviceId: "svc-1",
+        priceCents: 100_000,
+        createdAt: "2026-08-18T10:00:00.000Z",
+      }),
+      makeEventService({
+        eventId: "ev-1",
+        serviceId: "svc-2",
+        priceCents: 50_000,
+        createdAt: "2026-08-19T11:00:00.000Z",
+      }),
     ];
 
     expect(serviceSalesRows([ev], items)).toEqual([
-      { serviceId: "svc-1", priceCents: 100_000, eventDate: "2026-03-15" },
-      { serviceId: "svc-2", priceCents: 50_000, eventDate: "2026-03-15" },
+      { serviceId: "svc-1", priceCents: 100_000, soldAt: "2026-08-18T10:00:00.000Z" },
+      { serviceId: "svc-2", priceCents: 50_000, soldAt: "2026-08-19T11:00:00.000Z" },
     ]);
+  });
+
+  test("service sales use an item's close timestamp even when the event is in another month", () => {
+    const events = [makeEvento({ id: "ev-1", eventDate: "2026-09-20" })];
+    const eventServices = [
+      makeEventService({
+        eventId: "ev-1",
+        createdAt: "2026-08-18T10:00:00.000Z",
+      }),
+    ];
+
+    const rows = serviceSalesRows(events, eventServices);
+
+    expect(rows[0]).toMatchObject({ soldAt: "2026-08-18T10:00:00.000Z" });
   });
 
   test("excludes items belonging to a canceled event", () => {
@@ -287,17 +311,19 @@ describe("serviceSalesRows", () => {
 
     const rows = serviceSalesRows([active, canceled], items);
 
-    expect(rows).toEqual([{ serviceId: "svc-1", priceCents: 100_000, eventDate: "2026-03-15" }]);
+    expect(rows).toEqual([
+      { serviceId: "svc-1", priceCents: 100_000, soldAt: "2026-01-01T00:00:00.000Z" },
+    ]);
   });
 });
 
 describe("groupSalesByService", () => {
   test("groups rows by service, looks up names, sorts by total desc; services with no sales are omitted", () => {
     const rows = [
-      { serviceId: "svc-1", priceCents: 100_000, eventDate: "2026-01-10" },
-      { serviceId: "svc-1", priceCents: 50_000, eventDate: "2026-02-10" },
-      { serviceId: "svc-2", priceCents: 200_000, eventDate: "2026-01-15" },
-      { serviceId: "svc-3", priceCents: 10_000, eventDate: "2025-01-01" },
+      { serviceId: "svc-1", priceCents: 100_000, soldAt: "2026-01-10T10:00:00.000Z" },
+      { serviceId: "svc-1", priceCents: 50_000, soldAt: "2026-02-10T10:00:00.000Z" },
+      { serviceId: "svc-2", priceCents: 200_000, soldAt: "2026-01-15T10:00:00.000Z" },
+      { serviceId: "svc-3", priceCents: 10_000, soldAt: "2025-01-01T10:00:00.000Z" },
     ];
     const services: Service[] = [
       { id: "svc-1", name: "Buffet", defaultPriceCents: null, active: true },
@@ -313,12 +339,12 @@ describe("groupSalesByService", () => {
     ]);
   });
 
-  test("filters rows by eventDate within an inclusive [from, to] period", () => {
+  test("filters rows by soldAt's calendar date within an inclusive [from, to] period", () => {
     const rows = [
-      { serviceId: "svc-1", priceCents: 100_000, eventDate: "2026-01-01" }, // == from, included
-      { serviceId: "svc-1", priceCents: 50_000, eventDate: "2026-01-31" }, // == to, included
-      { serviceId: "svc-1", priceCents: 999_000, eventDate: "2025-12-31" }, // before from, excluded
-      { serviceId: "svc-1", priceCents: 999_000, eventDate: "2026-02-01" }, // after to, excluded
+      { serviceId: "svc-1", priceCents: 100_000, soldAt: "2026-01-01T23:59:59.999Z" }, // == from
+      { serviceId: "svc-1", priceCents: 50_000, soldAt: "2026-01-31T23:59:59.999Z" }, // == to
+      { serviceId: "svc-1", priceCents: 999_000, soldAt: "2025-12-31T23:59:59.999Z" }, // before
+      { serviceId: "svc-1", priceCents: 999_000, soldAt: "2026-02-01T00:00:00.000Z" }, // after
     ];
     const services: Service[] = [{ id: "svc-1", name: "Buffet", defaultPriceCents: null, active: true }];
 
