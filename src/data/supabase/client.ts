@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "./database.types";
 
-let client: SupabaseClient | undefined;
+let client: SupabaseClient<Database> | undefined;
 
 export function requireSupabaseEnv(): { url: string; publishableKey: string } {
   const url = import.meta.env.VITE_SUPABASE_URL;
@@ -13,11 +14,11 @@ export function requireSupabaseEnv(): { url: string; publishableKey: string } {
 }
 
 /** Lazily creates the browser client after validating its public configuration. */
-export function getSupabase(): SupabaseClient {
+export function getSupabase(): SupabaseClient<Database> {
   if (client) return client;
 
   const { url, publishableKey } = requireSupabaseEnv();
-  client = createClient(url, publishableKey);
+  client = createClient<Database>(url, publishableKey);
   return client;
 }
 
@@ -25,7 +26,7 @@ export function getSupabase(): SupabaseClient {
  * Shared browser-client contract. The proxy defers configuration validation
  * until the client is used, keeping module imports testable without env vars.
  */
-export const supabase = new Proxy({} as SupabaseClient, {
+export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(_target, property) {
     const value = Reflect.get(getSupabase(), property);
     return typeof value === "function" ? value.bind(getSupabase()) : value;
