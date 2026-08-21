@@ -1,74 +1,77 @@
-import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Navigate, useNavigate } from "react-router";
-import { toast } from "sonner";
+import { useState, type FormEvent } from "react";
+import { Navigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/layout/app-shell";
 import { defaultRouteFor, useAuth } from "@/data/auth";
-import { crud, resetDB } from "@/data/store";
-import { cn } from "@/lib/utils";
 import { usePageTitle } from "@/lib/use-page-title";
-import type { Profile, Role } from "@/domain/types";
 
-interface ActiveProfile {
-  profile: Profile;
-  role: Role;
+type PendingAction = "sign-in" | "reset" | null;
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
-/** Every active profile paired with its role, for the "Entrar como" list below. */
-function listActiveProfiles(): ActiveProfile[] {
-  const rolesById = new Map(crud("roles").list().map((role) => [role.id, role]));
-
-  return crud("profiles")
-    .list()
-    .filter((profile) => profile.active)
-    .flatMap((profile) => {
-      const role = rolesById.get(profile.roleId);
-      return role ? [{ profile, role }] : [];
-    });
-}
-
-/**
- * The app's front door. Email/senha are decorative (real auth arrives with
- * Supabase in F2) — the actual sign-in is "Entrar como", one button per
- * active demo profile. Already logged in -> straight to that role's home.
- */
+/** The Supabase email/password front door for AllegraOS. */
 export function LoginPage() {
-  const { user, loginAs } = useAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  // Bumped on "Restaurar" so `activeProfiles` re-reads the store — profiles
-  // are the one piece of this page's own content that reset could change.
-  const [restoredAt, setRestoredAt] = useState(0);
-  const activeProfiles = useMemo(listActiveProfiles, [restoredAt]);
-  // No title passed — the bare "AllegraOS" is the spec'd title for login.
+  const { user, signInWithPassword, requestPasswordReset } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   usePageTitle();
 
   if (user) return <Navigate to={defaultRouteFor(user.role)} replace />;
 
-  function handleEnterAs(entry: ActiveProfile) {
-    loginAs(entry.profile.userId);
-    navigate(defaultRouteFor(entry.role), { replace: true });
+  async function handleSignIn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setNotice(null);
+
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail || !password) {
+      setError("Informe seu email e sua senha.");
+      return;
+    }
+
+    setPendingAction("sign-in");
+    try {
+      await signInWithPassword({ email: normalizedEmail, password });
+    } catch (authError) {
+      setError(errorMessage(authError, "Não foi possível entrar. Tente novamente."));
+    } finally {
+      setPendingAction(null);
+    }
   }
 
-  function handleRestoreDemo() {
-    resetDB();
-    // `resetDB` rewrites the store directly (localStorage + its own in-memory
-    // cache) — TanStack Query has no way to know anything changed, and with
-    // every query's `staleTime: Infinity` (see `keys.ts`) it would otherwise
-    // keep serving pre-reset data for the rest of the session, only picking
-    // up the reset after a hard reload. Clearing the cache here is what
-    // makes "restaurar" actually take effect for whatever page comes next.
-    queryClient.clear();
-    setRestoredAt(Date.now());
-    toast.success("Dados de demonstração restaurados");
+  async function handlePasswordReset() {
+    setError(null);
+    setNotice(null);
+
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError("Informe seu email para recuperar a senha.");
+      return;
+    }
+
+    setPendingAction("reset");
+    try {
+      await requestPasswordReset(normalizedEmail);
+      setNotice("Enviamos as instruções de recuperação para o seu email.");
+    } catch (resetError) {
+      setError(errorMessage(resetError, "Não foi possível enviar o email de recuperação."));
+    } finally {
+      setPendingAction(null);
+    }
   }
+
+  const isPending = pendingAction !== null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <main className="flex min-h-screen items-center justify-center bg-background p-6">
       <Card className="w-full max-w-sm">
         <CardContent className="flex flex-col gap-8">
           <div className="flex flex-col items-center gap-2 pt-2 text-center">
@@ -78,49 +81,47 @@ export function LoginPage() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <Input
-              disabled
-              type="email"
-              aria-label="Email"
-              placeholder="em breve — fase 2"
-            />
-            <Input
-              disabled
-              type="password"
-              aria-label="Senha"
-              placeholder="em breve — fase 2"
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-              Entrar como
-            </p>
+          <form className="flex flex-col gap-4" onSubmit={handleSignIn} noValidate>
             <div className="flex flex-col gap-2">
-              {activeProfiles.map((entry, index) => (
-                <Button
-                  key={entry.profile.userId}
-                  type="button"
-                  variant={index === 0 ? "default" : "outline"}
-                  className="h-auto flex-col items-start gap-0.5 py-2.5"
-                  onClick={() => handleEnterAs(entry)}
-                >
-                  <span className="text-sm font-medium">{entry.profile.name}</span>
-                  <span
-                    className={cn(
-                      "text-xs font-normal",
-                      index === 0 ? "text-primary-foreground/70" : "text-muted-foreground",
-                    )}
-                  >
-                    {entry.role.name}
-                  </span>
-                </Button>
-              ))}
+              <Label htmlFor="login-email">Email</Label>
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={isPending}
+                aria-invalid={error ? true : undefined}
+              />
             </div>
-          </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="login-password">Senha</Label>
+              <Input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={isPending}
+                aria-invalid={error ? true : undefined}
+              />
+            </div>
+
+            {error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {notice ? (
+              <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
+                {notice}
+              </p>
+            ) : null}
+
+            <Button type="submit" disabled={isPending}>
+              {pendingAction === "sign-in" ? "Entrando…" : "Entrar"}
+            </Button>
+          </form>
         </CardContent>
 
         <CardFooter className="justify-center border-t border-border pt-6">
@@ -129,12 +130,13 @@ export function LoginPage() {
             variant="ghost"
             size="sm"
             className="text-xs text-muted-foreground"
-            onClick={handleRestoreDemo}
+            onClick={() => void handlePasswordReset()}
+            disabled={isPending}
           >
-            Restaurar dados de demonstração
+            {pendingAction === "reset" ? "Enviando…" : "Esqueci minha senha"}
           </Button>
         </CardFooter>
       </Card>
-    </div>
+    </main>
   );
 }

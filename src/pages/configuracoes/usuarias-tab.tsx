@@ -31,6 +31,7 @@ import { SettingsCard } from "@/pages/configuracoes/settings-card";
 import { SettingsRow } from "@/pages/configuracoes/settings-row";
 
 const profileSchema = z.object({
+  email: z.string().trim().email("Informe um email válido.").max(254, "O email pode ter até 254 caracteres."),
   name: z.string().trim().min(1, "Informe um nome.").max(80, "O nome pode ter até 80 caracteres."),
   roleId: z.string().min(1, "Selecione um papel."),
 });
@@ -82,10 +83,8 @@ const EMPTY_ROLE_FORM: RoleFormValues = {
 };
 
 /**
- * Usuárias & papéis: profiles (app users) and roles (RBAC), both still mock
- * data — real email invites land in the database phase; for now a new
- * profile just appears, ready to log in from the login screen with its
- * seeded/assigned role.
+ * Usuárias & papéis: profiles (app users) and roles (RBAC). New users are
+ * invited by email through the protected `invite-user` Edge Function.
  *
  * Two independent guards protect against locking everyone (or yourself) out
  * of Configurações:
@@ -113,7 +112,7 @@ export function UsuariasTab() {
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: "", roleId: "" },
+    defaultValues: { email: "", name: "", roleId: "" },
   });
   const roleForm = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
@@ -127,21 +126,21 @@ export function UsuariasTab() {
   // ---- Usuárias -------------------------------------------------------------
 
   function openCreateProfile() {
-    profileForm.reset({ name: "", roleId: "" });
+    profileForm.reset({ email: "", name: "", roleId: "" });
     setProfileDialogOpen(true);
   }
 
   function handleProfileDialogChange(next: boolean) {
     setProfileDialogOpen(next);
-    if (!next) profileForm.reset({ name: "", roleId: "" });
+    if (!next) profileForm.reset({ email: "", name: "", roleId: "" });
   }
 
   function onSubmitProfile(values: ProfileFormValues) {
     createProfile.mutate(
-      { name: values.name.trim(), roleId: values.roleId },
+      { email: values.email.trim(), name: values.name.trim(), roleId: values.roleId },
       {
         onSuccess: () => {
-          toast.success("Usuária criada!");
+          toast.success("Convite enviado!");
           handleProfileDialogChange(false);
         },
       },
@@ -225,8 +224,7 @@ export function UsuariasTab() {
         emptyMessage="Nenhuma usuária cadastrada ainda."
         footer={
           <p className="text-xs text-muted-foreground">
-            O convite real por email chega na fase de banco de dados — por enquanto a usuária entra pela tela de
-            login.
+            A usuária receberá por email um link seguro para definir o acesso.
           </p>
         }
       >
@@ -300,12 +298,26 @@ export function UsuariasTab() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-serif text-xl">Nova usuária</DialogTitle>
-            <DialogDescription>Cadastre uma nova usuária e o papel que ela vai usar.</DialogDescription>
+            <DialogDescription>Envie um convite e escolha o papel que a usuária vai usar.</DialogDescription>
           </DialogHeader>
           <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
+              <Label htmlFor="profile-email">Email</Label>
+              <Input
+                id="profile-email"
+                type="email"
+                autoComplete="email"
+                maxLength={254}
+                autoFocus
+                {...profileForm.register("email")}
+              />
+              {profileForm.formState.errors.email && (
+                <p className="text-sm text-destructive">{profileForm.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
               <Label htmlFor="profile-name">Nome</Label>
-              <Input id="profile-name" maxLength={80} autoFocus {...profileForm.register("name")} />
+              <Input id="profile-name" maxLength={80} autoComplete="name" {...profileForm.register("name")} />
               {profileForm.formState.errors.name && (
                 <p className="text-sm text-destructive">{profileForm.formState.errors.name.message}</p>
               )}
@@ -336,7 +348,7 @@ export function UsuariasTab() {
             </div>
             <DialogFooter>
               <Button type="submit" disabled={createProfile.isPending}>
-                Salvar
+                {createProfile.isPending ? "Enviando…" : "Enviar convite"}
               </Button>
             </DialogFooter>
           </form>

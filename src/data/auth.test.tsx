@@ -1,12 +1,75 @@
-import { beforeEach, describe, expect, test } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { AuthProvider, RequirePerm, defaultRouteFor, useAuth, usePerms } from "@/data/auth";
-import { crud, resetDB } from "@/data/store";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { AuthProvider, RequirePerm, defaultRouteFor, usePerms } from "@/data/auth";
 import type { Role } from "@/domain/types";
 
-const SESSION_KEY = "allegra-session";
+const auth = vi.hoisted(() => {
+  let callback: ((event: string, session: { user: { id: string } } | null) => void) | undefined;
+  const rows = new Map<string, Record<string, unknown>>();
+  const maybeSingle = vi.fn(async () => ({ data: null as Record<string, unknown> | null, error: null }));
+  const eq = vi.fn((_column: string, userId: string) => {
+    maybeSingle.mockResolvedValueOnce({ data: rows.get(userId) ?? null, error: null });
+    return { maybeSingle };
+  });
+  const select = vi.fn(() => ({ eq }));
+
+  return {
+    rows,
+    emit(session: { user: { id: string } } | null) {
+      callback?.("INITIAL_SESSION", session);
+    },
+    reset() {
+      rows.clear();
+      callback = undefined;
+      maybeSingle.mockReset().mockResolvedValue({ data: null, error: null });
+      eq.mockClear();
+      select.mockClear();
+    },
+    supabase: {
+      auth: {
+        onAuthStateChange: vi.fn((next: typeof callback) => {
+          callback = next;
+          return { data: { subscription: { unsubscribe: vi.fn() } } };
+        }),
+        signInWithPassword: vi.fn(async () => ({ data: {}, error: null })),
+        signOut: vi.fn(async () => ({ error: null })),
+        resetPasswordForEmail: vi.fn(async () => ({ data: {}, error: null })),
+      },
+      from: vi.fn(() => ({ select })),
+    },
+  };
+});
+
+vi.mock("@/data/supabase/client", () => ({ supabase: auth.supabase }));
+
+const ADMIN_ID = "11111111-1111-1111-1111-111111111111";
+const COMMERCIAL_ID = "22222222-2222-2222-2222-222222222222";
+
+function roleRow(id: string, name: string, overrides: Partial<Record<string, boolean>> = {}) {
+  return {
+    id,
+    name,
+    manage_finance: false,
+    manage_events: false,
+    manage_crm: false,
+    manage_team: false,
+    manage_settings: false,
+    created_at: "2026-08-21T12:00:00Z",
+    ...overrides,
+  };
+}
+
+function profileRow(userId: string, name: string, role: ReturnType<typeof roleRow>) {
+  return {
+    user_id: userId,
+    name,
+    role_id: role.id,
+    active: true,
+    created_at: "2026-08-21T12:00:00Z",
+    role,
+  };
+}
 
 function makeRole(overrides: Partial<Role> = {}): Role {
   return {
@@ -21,41 +84,27 @@ function makeRole(overrides: Partial<Role> = {}): Role {
   };
 }
 
-/** Exposes `useAuth()` to assertions/clicks; `loginAsId`, if given, wires a "login" button to it. */
-function AuthConsumer({ loginAsId }: { loginAsId?: string }) {
-  const { user, loginAs, logout } = useAuth();
-  return (
-    <div>
-      <span data-testid="user">{user ? `${user.profile.name}|${user.role.name}` : "none"}</span>
-      {loginAsId && <button onClick={() => loginAs(loginAsId)}>login</button>}
-      <button onClick={() => logout()}>logout</button>
-    </div>
-  );
+function PermsProbe() {
+  return <span data-testid="perms">{JSON.stringify(usePerms())}</span>;
 }
 
-function PermsConsumer() {
-  const perms = usePerms();
-  return <span data-testid="perms">{JSON.stringify(perms)}</span>;
-}
-
-/** Renders a route tree with `/protected` gated by `manageFinance`, plus every `defaultRouteFor` destination as a marker page. */
-function renderProtected(initialPath: string) {
+function renderProtected() {
   return render(
     <AuthProvider>
-      <MemoryRouter initialEntries={[initialPath]}>
+      <MemoryRouter initialEntries={["/protected"]}>
         <Routes>
           <Route
             path="/protected"
             element={
               <RequirePerm perm="manageFinance">
-                <div>Protected Content</div>
+                <div>Conteúdo protegido</div>
               </RequirePerm>
             }
           />
-          <Route path="/login" element={<div>Login Page</div>} />
-          <Route path="/dashboard" element={<div>Dashboard Page</div>} />
-          <Route path="/crm" element={<div>CRM Page</div>} />
-          <Route path="/eventos" element={<div>Eventos Page</div>} />
+          <Route path="/login" element={<div>Login</div>} />
+          <Route path="/dashboard" element={<div>Dashboard</div>} />
+          <Route path="/crm" element={<div>CRM</div>} />
+          <Route path="/eventos" element={<div>Eventos</div>} />
         </Routes>
       </MemoryRouter>
     </AuthProvider>,
@@ -63,177 +112,75 @@ function renderProtected(initialPath: string) {
 }
 
 beforeEach(() => {
-  localStorage.clear();
-  resetDB();
+  auth.reset();
+  auth.rows.set(
+    ADMIN_ID,
+    profileRow(ADMIN_ID, "Ana Admin", roleRow("role-admin", "Admin", { manage_finance: true })),
+  );
+  auth.rows.set(
+    COMMERCIAL_ID,
+    profileRow(
+      COMMERCIAL_ID,
+      "Bia Comercial",
+      roleRow("role-commercial", "Comercial", { manage_crm: true }),
+    ),
+  );
 });
 
 describe("defaultRouteFor", () => {
-  test("a role with manageFinance goes to /dashboard (admin)", () => {
-    expect(defaultRouteFor(makeRole({ manageFinance: true }))).toBe("/dashboard");
-  });
-
-  test("manageFinance outranks manageCrm when both are set (mirrors the seeded Admin role)", () => {
+  test("prioritizes Finance, then CRM, then Eventos", () => {
     expect(defaultRouteFor(makeRole({ manageFinance: true, manageCrm: true }))).toBe("/dashboard");
-  });
-
-  test("a role without manageFinance but with manageCrm goes to /crm (comercial)", () => {
     expect(defaultRouteFor(makeRole({ manageCrm: true }))).toBe("/crm");
-  });
-
-  test("a role with every flag false goes to /eventos", () => {
     expect(defaultRouteFor(makeRole())).toBe("/eventos");
   });
 });
 
-describe("AuthProvider / useAuth", () => {
-  test("loginAs logs in a valid, active profile and persists the session id", async () => {
-    const user = userEvent.setup();
-    render(
-      <AuthProvider>
-        <AuthConsumer loginAsId="profile-ana" />
-      </AuthProvider>,
-    );
-    expect(screen.getByTestId("user")).toHaveTextContent("none");
-
-    await user.click(screen.getByRole("button", { name: "login" }));
-
-    expect(screen.getByTestId("user")).toHaveTextContent("Gabi Lauria|Admin");
-    expect(localStorage.getItem(SESSION_KEY)).toBe("profile-ana");
-  });
-
-  test("loginAs with an unknown profile id is refused (stays logged out)", async () => {
-    const user = userEvent.setup();
-    render(
-      <AuthProvider>
-        <AuthConsumer loginAsId="profile-does-not-exist" />
-      </AuthProvider>,
-    );
-
-    await user.click(screen.getByRole("button", { name: "login" }));
-
-    expect(screen.getByTestId("user")).toHaveTextContent("none");
-    expect(localStorage.getItem(SESSION_KEY)).toBeNull();
-  });
-
-  test("loginAs with an inactive profile is refused (inactive profiles may not log in)", async () => {
-    crud("profiles").create({
-      userId: "profile-inactive",
-      name: "Inactive Person",
-      roleId: "role-comercial",
-      active: false,
-    });
-    const user = userEvent.setup();
-    render(
-      <AuthProvider>
-        <AuthConsumer loginAsId="profile-inactive" />
-      </AuthProvider>,
-    );
-
-    await user.click(screen.getByRole("button", { name: "login" }));
-
-    expect(screen.getByTestId("user")).toHaveTextContent("none");
-    expect(localStorage.getItem(SESSION_KEY)).toBeNull();
-  });
-
-  test("logout clears the user and the persisted session", async () => {
-    localStorage.setItem(SESSION_KEY, "profile-ana");
-    const user = userEvent.setup();
-    render(
-      <AuthProvider>
-        <AuthConsumer />
-      </AuthProvider>,
-    );
-    expect(screen.getByTestId("user")).toHaveTextContent("Gabi Lauria|Admin");
-
-    await user.click(screen.getByRole("button", { name: "logout" }));
-
-    expect(screen.getByTestId("user")).toHaveTextContent("none");
-    expect(localStorage.getItem(SESSION_KEY)).toBeNull();
-  });
-
-  test("restores the session from localStorage on mount", () => {
-    localStorage.setItem(SESSION_KEY, "profile-bia");
-
-    render(
-      <AuthProvider>
-        <AuthConsumer />
-      </AuthProvider>,
-    );
-
-    expect(screen.getByTestId("user")).toHaveTextContent("Bia Costa|Comercial");
-  });
-
-  test("a stale profile id in storage is treated as logged out", () => {
-    localStorage.setItem(SESSION_KEY, "profile-deleted-long-ago");
-
-    render(
-      <AuthProvider>
-        <AuthConsumer />
-      </AuthProvider>,
-    );
-
-    expect(screen.getByTestId("user")).toHaveTextContent("none");
-  });
-});
-
 describe("usePerms", () => {
-  test("returns the current user's role when logged in", () => {
-    localStorage.setItem(SESSION_KEY, "profile-bia");
-
-    render(
+  test("returns the active session role and remains fail-closed when signed out", async () => {
+    const view = render(
       <AuthProvider>
-        <PermsConsumer />
+        <PermsProbe />
       </AuthProvider>,
     );
+    await act(async () => auth.emit({ user: { id: COMMERCIAL_ID } }));
+    expect(JSON.parse(await screen.findByTestId("perms").then((node) => node.textContent!))).toMatchObject({
+      name: "Comercial",
+      manageCrm: true,
+      manageFinance: false,
+    });
 
-    const perms = JSON.parse(screen.getByTestId("perms").textContent!) as Role;
-    expect(perms.name).toBe("Comercial");
-    expect(perms.manageCrm).toBe(true);
-    expect(perms.manageFinance).toBe(false);
-  });
-
-  test("returns an all-false Role (id '', name '') when logged out", () => {
+    view.unmount();
     render(
       <AuthProvider>
-        <PermsConsumer />
+        <PermsProbe />
       </AuthProvider>,
     );
-
-    const perms = JSON.parse(screen.getByTestId("perms").textContent!) as Role;
-    expect(perms).toEqual({
+    await act(async () => auth.emit(null));
+    expect(JSON.parse((await screen.findByTestId("perms")).textContent!)).toMatchObject({
       id: "",
       name: "",
       manageFinance: false,
-      manageEvents: false,
       manageCrm: false,
-      manageTeam: false,
-      manageSettings: false,
     });
   });
 });
 
 describe("RequirePerm", () => {
-  test("redirects an unauthenticated user to /login", async () => {
-    renderProtected("/protected");
-
-    expect(await screen.findByText("Login Page")).toBeInTheDocument();
-    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
+  test("redirects a signed-out user to login", async () => {
+    renderProtected();
+    await act(async () => auth.emit(null));
+    expect(await screen.findByText("Login")).toBeInTheDocument();
   });
 
-  test("redirects a user missing the flag to their defaultRouteFor (comercial hitting a manageFinance gate -> /crm)", async () => {
-    localStorage.setItem(SESSION_KEY, "profile-bia");
-
-    renderProtected("/protected");
-
-    expect(await screen.findByText("CRM Page")).toBeInTheDocument();
-    expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
+  test("redirects Comercial away from Finance to CRM", async () => {
+    renderProtected();
+    await act(async () => auth.emit({ user: { id: COMMERCIAL_ID } }));
+    expect(await screen.findByText("CRM")).toBeInTheDocument();
   });
 
-  test("renders children when the user has the required flag (admin)", async () => {
-    localStorage.setItem(SESSION_KEY, "profile-ana");
-
-    renderProtected("/protected");
-
-    expect(await screen.findByText("Protected Content")).toBeInTheDocument();
+  test("renders the protected content for Admin", async () => {
+    renderProtected();
+    await act(async () => auth.emit({ user: { id: ADMIN_ID } }));
+    expect(await screen.findByText("Conteúdo protegido")).toBeInTheDocument();
   });
 });

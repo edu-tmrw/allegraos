@@ -1,104 +1,120 @@
-import { beforeEach, describe, expect, test } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/data/auth";
-import { crud, resetDB } from "@/data/store";
 import { UsuariasTab } from "@/pages/configuracoes/usuarias-tab";
 
-const SESSION_KEY = "allegra-session";
+const mocks = vi.hoisted(() => ({
+  createProfile: vi.fn(),
+  updateProfile: vi.fn(),
+  createRole: vi.fn(),
+  updateRole: vi.fn(),
+}));
 
-/**
- * `<AuthProvider>` (the tab reads `useAuth()` for the self-guard) wraps
- * `<UsuariasTab>` directly rather than the whole `<ConfiguracoesPage>` —
- * same reasoning as `servicos.test.tsx` testing `<ServicosTab>` in
- * isolation. `<Toaster/>` mirrors `main.tsx`'s real mount point so
- * `toast.error(...)` from the guards renders something assertable.
- */
+const profiles = [
+  { userId: "user-admin", name: "Gabi Lauria", roleId: "role-admin", active: true },
+  { userId: "user-commercial", name: "Bia Costa", roleId: "role-commercial", active: true },
+];
+
+const roles = [
+  {
+    id: "role-admin",
+    name: "Admin",
+    manageFinance: true,
+    manageEvents: true,
+    manageCrm: true,
+    manageTeam: true,
+    manageSettings: true,
+  },
+  {
+    id: "role-commercial",
+    name: "Comercial",
+    manageFinance: false,
+    manageEvents: false,
+    manageCrm: true,
+    manageTeam: false,
+    manageSettings: false,
+  },
+];
+
+vi.mock("@/data/auth", () => ({
+  useAuth: () => ({ user: { profile: profiles[0], role: roles[0] } }),
+}));
+
+vi.mock("@/data/hooks/use-access", () => ({
+  useProfiles: () => ({ data: profiles, isLoading: false }),
+  useRoles: () => ({ data: roles, isLoading: false }),
+  useCreateProfile: () => ({ mutate: mocks.createProfile, isPending: false }),
+  useUpdateProfile: () => ({ mutate: mocks.updateProfile, isPending: false }),
+  useCreateRole: () => ({ mutate: mocks.createRole, isPending: false }),
+  useUpdateRole: () => ({ mutate: mocks.updateRole, isPending: false }),
+}));
+
 function renderTab() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <UsuariasTab />
-        <Toaster />
-      </AuthProvider>
+      <UsuariasTab />
+      <Toaster />
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
-  localStorage.clear();
-  resetDB();
-  // Logs in as Gabi (seeded Admin) before every test, the way a real session would resolve on mount.
-  localStorage.setItem(SESSION_KEY, "profile-ana");
+  for (const mock of Object.values(mocks)) mock.mockReset();
 });
 
 describe("UsuariasTab", () => {
-  test("lists Gabi and Bia with their role names; creating Carla with papel Comercial adds a profile row", async () => {
+  test("submits email, name and role to the invitation mutation", async () => {
     const user = userEvent.setup();
     renderTab();
 
-    await screen.findByText("Gabi Lauria");
+    expect(await screen.findByText("Gabi Lauria")).toBeInTheDocument();
     expect(screen.getByText("Bia Costa")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Papel de Gabi Lauria" })).toHaveTextContent("Admin");
-    expect(screen.getByRole("combobox", { name: "Papel de Bia Costa" })).toHaveTextContent("Comercial");
 
     await user.click(screen.getByRole("button", { name: "Adicionar usuária" }));
-    await user.type(await screen.findByLabelText("Nome"), "Carla");
-
+    await user.type(await screen.findByLabelText("Email"), "carla@allegra.com.br");
+    await user.type(screen.getByLabelText("Nome"), "Carla");
     await user.click(screen.getByLabelText("Papel"));
     await user.click(await screen.findByRole("option", { name: "Comercial" }));
+    await user.click(screen.getByRole("button", { name: "Enviar convite" }));
 
-    await user.click(screen.getByRole("button", { name: "Salvar" }));
-
-    expect(await screen.findByText("Carla")).toBeInTheDocument();
-
-    // The store (not just the UI) gained a real profile row, with a minted userId.
-    const created = crud("profiles").list().find((profile) => profile.name === "Carla");
-    expect(created).toBeDefined();
-    expect(created?.userId).toBeTruthy();
-    expect(created?.roleId).toBe("role-comercial");
-    expect(created?.active).toBe(true);
+    expect(mocks.createProfile).toHaveBeenCalledWith(
+      {
+        email: "carla@allegra.com.br",
+        name: "Carla",
+        roleId: "role-commercial",
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
   });
 
-  test("self-guard: Gabi toggling her own active switch off is refused (toast, stays active)", async () => {
+  test("self-guard refuses to inactivate the signed-in profile", async () => {
     const user = userEvent.setup();
     renderTab();
 
-    const anaSwitch = await screen.findByRole("switch", { name: "Inativar Gabi Lauria" });
-    expect(anaSwitch).toHaveAttribute("aria-checked", "true");
-
-    await user.click(anaSwitch);
+    await user.click(await screen.findByRole("switch", { name: "Inativar Gabi Lauria" }));
 
     expect(await screen.findByText("Você não pode inativar a si mesma")).toBeInTheDocument();
-    expect(anaSwitch).toHaveAttribute("aria-checked", "true");
-    expect(crud("profiles").get("profile-ana")?.active).toBe(true);
+    expect(mocks.updateProfile).not.toHaveBeenCalled();
   });
 
-  test("role editor: toggling Comercial's manageCrm off persists; toggling Admin's manageSettings off is blocked (only settings-capable role)", async () => {
+  test("updates ordinary role permissions and protects the last settings-capable role", async () => {
     const user = userEvent.setup();
     renderTab();
 
-    const crmSwitch = await screen.findByRole("switch", { name: "CRM de Comercial" });
-    expect(crmSwitch).toHaveAttribute("aria-checked", "true");
+    await user.click(await screen.findByRole("switch", { name: "CRM de Comercial" }));
+    expect(mocks.updateRole).toHaveBeenCalledWith({
+      id: "role-commercial",
+      patch: { manageCrm: false },
+    });
 
-    await user.click(crmSwitch);
-
-    await waitFor(() => expect(crud("roles").get("role-comercial")?.manageCrm).toBe(false));
-    expect(crmSwitch).toHaveAttribute("aria-checked", "false");
-
-    // Admin is the only active role with manageSettings among active profiles — turning it off must be refused.
-    const settingsSwitch = screen.getByRole("switch", { name: "Configurações de Admin" });
-    expect(settingsSwitch).toHaveAttribute("aria-checked", "true");
-
-    await user.click(settingsSwitch);
-
+    mocks.updateRole.mockClear();
+    await user.click(screen.getByRole("switch", { name: "Configurações de Admin" }));
     expect(await screen.findByText("Algum papel ativo precisa manter Configurações")).toBeInTheDocument();
-    expect(settingsSwitch).toHaveAttribute("aria-checked", "true");
-    expect(crud("roles").get("role-admin")?.manageSettings).toBe(true);
+    expect(mocks.updateRole).not.toHaveBeenCalled();
   });
 });
